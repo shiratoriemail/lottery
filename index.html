@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>抽選会ルーレット</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&family=Chivo+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one stage screen — header bar, tier rail, big draw stage, winners log below. Single dark "stage" look by choice. */
+:root{
+  --bg:#12101c; --panel:#1d1a2c; --line:#35304d; --fg:#f3efe6; --muted:#a39db8;
+  --gold:#f2c14e; --red:#e4573d; --silver:#c9cbd6; --bronze:#d08a52; --teal:#46c2b0;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --num:"Chivo Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+body{margin:0}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.6;padding-inline:16px;padding-block:16px 40px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(1.6rem,4vw,2.4rem);margin:0;letter-spacing:.04em;text-wrap:balance}
+h1 span{color:var(--gold)}
+.btn{font:700 1rem var(--body);border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:10px 16px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff;font-family:var(--display);font-weight:400;font-size:1.3rem;padding:14px 28px;letter-spacing:.06em}
+.btn.primary:disabled{opacity:.4;cursor:not-allowed}
+.btn.small{font-size:.85rem;padding:6px 12px}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+
+/* settings */
+#setup{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:16px}
+#setup h2{margin:0;font-size:1.1rem}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+input{font:500 1rem var(--body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{font-family:var(--num)}
+.prizeRow{display:grid;grid-template-columns:4.5rem 1fr 6rem;gap:8px;align-items:center}
+.prizeRow b{font-family:var(--display);font-weight:400}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.err{color:var(--red);font-weight:700}
+
+/* tier rail */
+.rail{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tier{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel);display:grid;gap:2px;min-width:0}
+.tier .t{font-family:var(--display);font-size:1.1rem}
+.tier .p{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tier.now{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.tier.done{opacity:.55}
+.tier.done .t::after{content:" 済";font-size:.75rem;color:var(--teal)}
+
+/* stage */
+#stage{border-radius:18px;padding:24px 20px;display:grid;gap:18px;justify-items:center;text-align:center;
+  background:radial-gradient(ellipse at 50% 0%,#2d2546 0%,var(--panel) 70%);border:1px solid var(--line);min-height:320px}
+.rank{font-family:var(--display);font-size:clamp(2.4rem,9vw,5rem);line-height:1;letter-spacing:.06em}
+.prize{font-family:var(--display);font-size:clamp(1.2rem,4vw,2rem);color:var(--gold);min-height:1.4em;opacity:0;transform:scale(.8);transition:opacity .5s,transform .5s cubic-bezier(.2,1.6,.4,1)}
+.prize.show{opacity:1;transform:none}
+.sub{color:var(--muted);margin:0}
+.balls{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}
+.ball{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;font-size:var(--bs,2rem);
+  min-width:calc(var(--bs,2rem)*2.6);padding:.25em .4em;border-radius:12px;background:var(--bg);border:2px solid var(--line);color:var(--muted)}
+.ball.win{color:var(--bg);background:var(--c,var(--gold));border-color:var(--c,var(--gold));animation:pop .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{from{transform:scale(.4)}to{transform:none}}
+.tier1{--c:var(--gold)}.tier2{--c:var(--silver)}.tier3{--c:var(--bronze)}.tier4{--c:var(--teal)}
+.rank.tier1{color:var(--gold)}.rank.tier2{color:var(--silver)}.rank.tier3{color:var(--bronze)}.rank.tier4{color:var(--teal)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+
+/* log */
+#log{display:grid;gap:10px}
+#log h2{margin:0;font-size:1.1rem}
+.logRow{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:grid;gap:6px}
+.logRow .h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.logRow .h b{font-family:var(--display);font-weight:400}
+.logRow .nums{font-family:var(--num);font-variant-numeric:tabular-nums;word-break:break-word;color:var(--fg)}
+.foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+@media (max-width:560px){.rail{grid-template-columns:repeat(2,1fr)}.prizeRow{grid-template-columns:3.5rem 1fr 4.5rem}}
+@media (prefers-reduced-motion:reduce){.ball.win{animation:none}.prize{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>抽選会 <span>ルーレット</span></h1>
+    <div class="controls">
+      <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
+      <button class="btn small" id="setupBtn" type="button">設定</button>
+    </div>
+  </header>
+
+  <section id="setup">
+    <h2>抽選の設定</h2>
+    <div class="grid2">
+      <label for="maxNum">配った番号札の最大番号（1〜この番号で抽選）
+        <input id="maxNum" type="number" min="1" value="80" inputmode="numeric">
+      </label>
+      <label for="exclude">欠席・対象外の番号（カンマ区切り、例：3,17,25）
+        <input id="exclude" type="text" placeholder="なし">
+      </label>
+    </div>
+    <div style="display:grid;gap:8px">
+      <div class="prizeRow note"><span>等級</span><span>景品名</span><span>当選人数</span></div>
+      <div id="prizeRows"></div>
+    </div>
+    <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
+    <div class="controls" style="justify-content:flex-start">
+      <button class="btn primary" id="startBtn" type="button">この設定で開始</button>
+    </div>
+  </section>
+
+  <section id="main" hidden>
+    <div class="rail" id="rail"></div>
+  </section>
+
+  <section id="stage" hidden>
+    <div class="rank" id="rank">4等</div>
+    <div class="prize" id="prize"></div>
+    <p class="sub" id="sub"></p>
+    <div class="balls" id="balls"></div>
+    <div class="controls">
+      <button class="btn primary" id="drawBtn" type="button">ルーレット スタート</button>
+      <button class="btn" id="nextBtn" type="button" hidden>次の等級へ</button>
+    </div>
+  </section>
+
+  <section id="log" hidden>
+    <div class="foot">
+      <h2>当選番号一覧</h2>
+      <button class="btn small" id="resetBtn" type="button">最初からやり直す</button>
+    </div>
+    <div id="logRows"></div>
+  </section>
+</div>
+
+<script>
+const DEFAULT_PRIZES=[
+  {rank:1,name:"1等の景品名",count:2},
+  {rank:2,name:"2等の景品名",count:5},
+  {rank:3,name:"3等の景品名",count:15},
+  {rank:4,name:"4等の景品名",count:20},
+];
+const KEY="lottery-roulette-v1";
+let S={prizes:JSON.parse(JSON.stringify(DEFAULT_PRIZES)),max:80,exclude:"",started:false,results:{},order:[4,3,2,1],idx:0};
+try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes)S=v;}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const $=id=>document.getElementById(id);
+
+/* ---------- setup ---------- */
+function renderSetup(){
+  $("maxNum").value=S.max;$("exclude").value=S.exclude;
+  $("prizeRows").innerHTML=S.prizes.map(p=>`
+    <div class="prizeRow" style="margin-bottom:8px">
+      <b class="rank tier${p.rank}" style="font-size:1.2rem">${p.rank}等</b>
+      <input id="pn${p.rank}" type="text" value="${esc(p.name)}" aria-label="${p.rank}等の景品名">
+      <input id="pc${p.rank}" type="number" min="1" value="${p.count}" inputmode="numeric" aria-label="${p.rank}等の人数">
+    </div>`).join("");
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function parseExclude(t){return new Set(String(t).split(/[,、\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
+function pool(){
+  const ex=parseExclude(S.exclude),won=new Set(Object.values(S.results).flat());
+  const a=[];for(let i=1;i<=S.max;i++)if(!ex.has(i)&&!won.has(i))a.push(i);return a;
+}
+$("startBtn").onclick=()=>{
+  const max=parseInt($("maxNum").value,10);
+  S.prizes.forEach(p=>{p.name=$("pn"+p.rank).value.trim()||`${p.rank}等`;p.count=Math.max(1,parseInt($("pc"+p.rank).value,10)||1);});
+  S.exclude=$("exclude").value;
+  if(!(max>=1)){msg("最大番号を1以上で入れてください。");return;}
+  S.max=max;
+  const total=S.prizes.reduce((a,p)=>a+p.count,0);
+  const avail=pool().length;
+  if(total>avail){msg(`当選人数の合計（${total}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
+  S.started=true;save();showMain();
+};
+function msg(t){$("setupMsg").innerHTML=`<span class="err">${t}</span>`}
+
+/* ---------- main ---------- */
+function prizeOf(r){return S.prizes.find(p=>p.rank===r)}
+function showMain(){
+  $("setup").hidden=true;$("main").hidden=false;$("stage").hidden=false;$("log").hidden=false;
+  renderRail();renderLog();prepareStage();
+}
+function renderRail(){
+  const cur=S.order[S.idx];
+  $("rail").innerHTML=S.order.map(r=>{const p=prizeOf(r);
+    return `<div class="tier ${r===cur?"now":""} ${S.results[r]?"done":""}"><span class="t rank tier${r}" style="font-size:1.1rem">${r}等</span><span class="p">${esc(p.name)}・${p.count}名</span></div>`}).join("");
+}
+function prepareStage(){
+  const r=S.order[S.idx];
+  if(r===undefined){ // finished
+    $("rank").className="rank tier1";$("rank").textContent="抽選終了";
+    $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
+    $("sub").textContent="";$("balls").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;return;
+  }
+  const p=prizeOf(r);
+  $("rank").className="rank tier"+r;$("rank").textContent=r+"等";
+  $("prize").className="prize";$("prize").textContent=p.name;
+  $("sub").textContent=`${p.count}名を一度に抽選します（残り対象 ${pool().length}名）`;
+  const size=p.count<=2?"clamp(3rem,14vw,6rem)":p.count<=5?"clamp(2.2rem,9vw,4rem)":p.count<=15?"clamp(1.4rem,5vw,2.4rem)":"clamp(1.2rem,4vw,2rem)";
+  $("balls").style.setProperty("--bs",size);
+  $("balls").innerHTML=Array.from({length:p.count},()=>`<div class="ball">${"-".repeat(String(S.max).length)}</div>`).join("");
+  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;
+  if(S.results[r]){showWinners(r,false);}
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+
+let spinning=false;
+$("drawBtn").onclick=()=>{
+  if(spinning)return;const r=S.order[S.idx];const p=prizeOf(r);
+  const cand=pool();if(cand.length<p.count){$("sub").textContent="抽選対象が足りません。";return;}
+  const winners=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);
+  spinning=true;$("drawBtn").disabled=true;
+  const balls=[...$("balls").children];const pad=String(S.max).length;
+  Music.start();
+  const dur=r===1?6500:r===2?5500:4500; const t0=performance.now();
+  // stop balls one by one near the end
+  const stopAt=balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
+  let last=0;
+  function frame(t){
+    const el=t-t0;
+    const interval=60+Math.min(el/dur,1)*120;
+    if(t-last>interval){last=t;
+      balls.forEach((b,i)=>{if(el<stopAt[i]){b.textContent=String(cand[Math.floor(Math.random()*cand.length)]).padStart(pad,"0");}});
+      Music.tick();
+    }
+    balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){b.textContent=String(winners[i]).padStart(pad,"0");b.classList.add("win","tier"+r);Music.ding();}});
+    if(el<dur)requestAnimationFrame(frame);else finish();
+  }
+  function finish(){
+    Music.stop();Music.fanfare(r);
+    S.results[r]=winners;save();spinning=false;
+    showWinners(r,true);renderRail();renderLog();
+  }
+  requestAnimationFrame(frame);
+};
+function showWinners(r,anim){
+  const pad=String(S.max).length;const balls=[...$("balls").children];
+  S.results[r].forEach((n,i)=>{if(balls[i]){balls[i].textContent=String(n).padStart(pad,"0");balls[i].classList.add("win","tier"+r);if(!anim)balls[i].style.animation="none";}});
+  $("prize").classList.add("show");
+  $("sub").textContent=`当選おめでとうございます！ 番号札をお持ちの方は前へどうぞ`;
+  $("drawBtn").hidden=true;$("nextBtn").hidden=false;
+  $("nextBtn").textContent=S.idx<S.order.length-1?`次へ（${S.order[S.idx+1]}等）`:"抽選を終える";
+}
+$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();};
+function renderLog(){
+  const rows=S.order.filter(r=>S.results[r]).map(r=>{const p=prizeOf(r);
+    return `<div class="logRow"><div class="h"><b class="rank tier${r}" style="font-size:1.1rem">${r}等</b><span>${esc(p.name)}</span><span class="note">${S.results[r].length}名</span></div><div class="nums">${S.results[r].join("、")}</div></div>`});
+  $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。4等から順に抽選します。</p>`;
+}
+$("setupBtn").onclick=()=>{ if(spinning)return;
+  const anyDrawn=Object.keys(S.results).length>0;
+  $("setup").hidden=!$("setup").hidden;renderSetup();
+  $("startBtn").textContent=anyDrawn?"設定を保存して戻る":"この設定で開始";
+  $("setupMsg").textContent=anyDrawn?"抽選済みの結果はそのまま残ります。景品名の修正や、遅れて来た方の分の最大番号の変更ができます。":"受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。";
+};
+let resetArmed=null;
+$("resetBtn").onclick=()=>{
+  if(spinning)return;
+  const b=$("resetBtn");
+  if(!resetArmed){
+    b.textContent="もう一度押すと結果を消します";b.classList.add("danger");
+    resetArmed=setTimeout(()=>{resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");},4000);
+    return;
+  }
+  clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
+  Music.stop();
+  S.results={};S.idx=0;S.started=false;save();
+  $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
+  $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";
+  $("setupMsg").textContent="結果を消しました。設定を確認して開始してください。";
+  renderSetup();window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* ---------- sound (Web Audio, no files) ---------- */
+const Music=(()=>{
+  let ctx,on=true,loop=null,master;
+  function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.35;master.connect(ctx.destination);}if(ctx.state==="suspended")ctx.resume();return ctx}
+  function note(f,t,d,type="square",v=.15){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d+.02)}
+  function noise(t,d,v=.12){const c=ac(),b=c.createBuffer(1,c.sampleRate*d,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;const s=c.createBufferSource(),g=c.createGain(),h=c.createBiquadFilter();h.type="highpass";h.frequency.value=5000;s.buffer=b;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(h);h.connect(g);g.connect(master);s.start(t)}
+  // upbeat game-show loop: bass + arpeggio + hi-hat, 150bpm
+  const bass=[110,110,147,147,131,131,165,165], arp=[440,554,659,880,659,554,494,587,740,587,523,659,784,659,587,494];
+  function startLoop(){const c=ac();const step=60/150/2;let n=0,next=c.currentTime+.05;
+    loop=setInterval(()=>{while(next<c.currentTime+.2){
+      if(n%2===0)note(bass[(n/2|0)%8],next,step*1.8,"triangle",.3);
+      note(arp[n%16],next,step*.8,"square",.06);
+      noise(next,.04,n%4===2?.15:.06);
+      n++;next+=step;}},50);}
+  return{
+    start(){if(!on)return;try{startLoop()}catch(e){}},
+    stop(){clearInterval(loop);loop=null},
+    tick(){},
+    ding(){if(!on)return;try{const t=ac().currentTime;note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}catch(e){}},
+    fanfare(r){if(!on)return;try{const t=ac().currentTime+.05;
+      const seq=r<=2?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
+      seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));
+      if(r===1)[1318,1568,2093].forEach((f,i)=>note(f,t+1.5+i*.12,.6,"square",.08));}catch(e){}},
+    toggle(){on=!on;if(!on)this.stop();return on},
+    unlock(){try{ac()}catch(e){}}
+  };
+})();
+$("soundBtn").onclick=()=>{const on=Music.toggle();$("soundBtn").textContent=on?"🔊 音あり":"🔇 音なし";if(on)Music.unlock();};
+document.addEventListener("pointerdown",()=>Music.unlock(),{once:true});
+
+/* ---------- boot ---------- */
+renderSetup();
+if(S.started)showMain();
+</script>
+</body>
+</html>
