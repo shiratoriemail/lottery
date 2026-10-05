@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>抽選会ルーレット</title>
+<title>EPDW創業記念 抽選会</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&family=Chivo+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Shippori+Mincho+B1:wght@800&family=Zen+Kaku+Gothic+New:wght@400;700&family=Chivo+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: one stage screen — header bar, tier rail, big draw stage, winners log below. Single dark "stage" look by choice. */
 :root{
@@ -23,8 +23,21 @@ html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--body);font-size:16px;line-height:1.6;padding-inline:16px;padding-block:16px 40px}
 .wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
-h1{font-family:var(--display);font-weight:400;font-size:clamp(1.6rem,4vw,2.4rem);margin:0;letter-spacing:.04em;text-wrap:balance}
-h1 span{color:var(--gold)}
+/* gorgeous title */
+.topbar{display:flex;justify-content:flex-end;gap:8px}
+.title{position:relative;text-align:center;padding-block:8px 18px;display:grid;gap:6px;justify-items:center;overflow:hidden}
+.title .eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;font-size:clamp(1.1rem,3.6vw,1.9rem);letter-spacing:.3em;color:var(--gold);
+  display:flex;align-items:center;gap:.8em;padding-left:.3em}
+.title .eyebrow::before,.title .eyebrow::after{content:"";width:clamp(24px,8vw,90px);height:2px;background:linear-gradient(90deg,transparent,var(--gold))}
+.title .eyebrow::after{transform:scaleX(-1)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,15vw,8rem);line-height:1.05;margin:0;letter-spacing:.12em;padding-left:.12em;
+  background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite;
+  filter:drop-shadow(0 4px 0 #6b4a12) drop-shadow(0 0 24px rgba(242,193,78,.35))}
+@keyframes shine{from{background-position:100% 0}to{background-position:-150% 0}}
+.title .rule{font-size:.85rem;letter-spacing:.4em;color:var(--muted);padding-left:.4em}
+#sparkles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.title>:not(canvas){position:relative}
 .btn{font:700 1rem var(--body);border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:10px 16px;cursor:pointer}
 .btn:hover{border-color:var(--muted)}
 .btn:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
@@ -79,18 +92,32 @@ input[type=number]{font-family:var(--num)}
 .logRow .nums{font-family:var(--num);font-variant-numeric:tabular-nums;word-break:break-word;color:var(--fg)}
 .foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
 @media (max-width:560px){.rail{grid-template-columns:repeat(2,1fr)}.prizeRow{grid-template-columns:3.5rem 1fr 4.5rem}}
-@media (prefers-reduced-motion:reduce){.ball.win{animation:none}.prize{transition:none}}
+/* prize reveal */
+.reveal{display:grid;gap:12px;justify-items:center;width:100%}
+.prizeImg{width:min(520px,100%);aspect-ratio:4/3;object-fit:cover;border-radius:16px;border:3px solid var(--c,var(--gold));
+  box-shadow:0 0 0 6px rgba(242,193,78,.15),0 18px 40px rgba(0,0,0,.5);background:var(--bg);animation:pop .6s cubic-bezier(.2,1.6,.4,1) both;max-width:100%}
+.mystery{width:min(520px,100%);aspect-ratio:4/3;border-radius:16px;border:3px dashed var(--line);display:grid;place-items:center;
+  font-family:var(--display);font-size:clamp(3rem,12vw,6rem);color:var(--line);max-width:100%}
+.imgCell{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.thumb{width:56px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.fileBtn{position:relative;overflow:hidden}
+.fileBtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.prizeBlock{display:grid;gap:8px;padding-block:10px;border-bottom:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}}
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <header>
-    <h1>抽選会 <span>ルーレット</span></h1>
-    <div class="controls">
-      <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
-      <button class="btn small" id="setupBtn" type="button">設定</button>
-    </div>
+  <div class="topbar">
+    <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
+    <button class="btn small" id="setupBtn" type="button">設定</button>
+  </div>
+  <header class="title">
+    <canvas id="sparkles" aria-hidden="true"></canvas>
+    <div class="eyebrow">EPDW 創業記念</div>
+    <h1>抽選会</h1>
+    <div class="rule">GRAND PRIZE DRAW</div>
   </header>
 
   <section id="setup">
@@ -104,8 +131,9 @@ input[type=number]{font-family:var(--num)}
       </label>
     </div>
     <div style="display:grid;gap:8px">
-      <div class="prizeRow note"><span>等級</span><span>景品名</span><span>当選人数</span></div>
+      <div class="prizeRow note"><span>等級</span><span>景品名（当選まで非表示）</span><span>当選人数</span></div>
       <div id="prizeRows"></div>
+      <p class="note">景品の写真は「写真を選ぶ」から登録できます（この端末に保存）。GitHubに prize1.jpg〜prize4.jpg を置いても自動で表示されます。</p>
     </div>
     <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
     <div class="controls" style="justify-content:flex-start">
@@ -119,6 +147,7 @@ input[type=number]{font-family:var(--num)}
 
   <section id="stage" hidden>
     <div class="rank" id="rank">4等</div>
+    <div class="reveal" id="reveal"></div>
     <div class="prize" id="prize"></div>
     <p class="sub" id="sub"></p>
     <div class="balls" id="balls"></div>
@@ -149,17 +178,38 @@ let S={prizes:JSON.parse(JSON.stringify(DEFAULT_PRIZES)),max:80,exclude:"",start
 try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes)S=v;}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const $=id=>document.getElementById(id);
+const IMGKEY=r=>"lottery-img-"+r;
+function getImg(r){try{return localStorage.getItem(IMGKEY(r))||""}catch(e){return ""}}
+function setImg(r,d){try{d?localStorage.setItem(IMGKEY(r),d):localStorage.removeItem(IMGKEY(r));return true}catch(e){return false}}
+function imgSrc(r){return getImg(r)||`prize${r}.jpg`}
+function resizeFile(file){return new Promise((ok,ng)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
+  const m=1000,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.82))};im.onerror=ng;im.src=fr.result};fr.onerror=ng;fr.readAsDataURL(file)})}
 
 /* ---------- setup ---------- */
 function renderSetup(){
   $("maxNum").value=S.max;$("exclude").value=S.exclude;
-  $("prizeRows").innerHTML=S.prizes.map(p=>`
-    <div class="prizeRow" style="margin-bottom:8px">
-      <b class="rank tier${p.rank}" style="font-size:1.2rem">${p.rank}等</b>
-      <input id="pn${p.rank}" type="text" value="${esc(p.name)}" aria-label="${p.rank}等の景品名">
-      <input id="pc${p.rank}" type="number" min="1" value="${p.count}" inputmode="numeric" aria-label="${p.rank}等の人数">
-    </div>`).join("");
+  $("prizeRows").innerHTML=S.prizes.map(p=>{const im=getImg(p.rank);return `
+    <div class="prizeBlock">
+      <div class="prizeRow">
+        <b class="rank tier${p.rank}" style="font-size:1.2rem">${p.rank}等</b>
+        <input id="pn${p.rank}" type="text" value="${esc(p.name)}" aria-label="${p.rank}等の景品名">
+        <input id="pc${p.rank}" type="number" min="1" value="${p.count}" inputmode="numeric" aria-label="${p.rank}等の人数">
+      </div>
+      <div class="imgCell">
+        ${im?`<img class="thumb" src="${im}" alt="">`:`<span class="note">写真なし</span>`}
+        <label class="btn small fileBtn" for="pf${p.rank}">写真を選ぶ<input id="pf${p.rank}" type="file" accept="image/*" data-r="${p.rank}"></label>
+        ${im?`<button class="btn small" type="button" data-del="${p.rank}">写真を外す</button>`:""}
+      </div>
+    </div>`}).join("");
+  $("prizeRows").querySelectorAll("input[type=file]").forEach(inp=>inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;keepNames();
+    try{const d=await resizeFile(f);if(!setImg(+inp.dataset.r,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
+    catch(e){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
+    renderSetup();});
+  $("prizeRows").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{keepNames();setImg(+b.dataset.del,"");renderSetup();});
 }
+function keepNames(){S.prizes.forEach(p=>{const n=$("pn"+p.rank),c=$("pc"+p.rank);if(n)p.name=n.value;if(c)p.count=parseInt(c.value,10)||p.count;});S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function parseExclude(t){return new Set(String(t).split(/[,、\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
 function pool(){
@@ -175,7 +225,7 @@ $("startBtn").onclick=()=>{
   const total=S.prizes.reduce((a,p)=>a+p.count,0);
   const avail=pool().length;
   if(total>avail){msg(`当選人数の合計（${total}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
-  S.started=true;save();showMain();
+  S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
 };
 function msg(t){$("setupMsg").innerHTML=`<span class="err">${t}</span>`}
 
@@ -188,18 +238,19 @@ function showMain(){
 function renderRail(){
   const cur=S.order[S.idx];
   $("rail").innerHTML=S.order.map(r=>{const p=prizeOf(r);
-    return `<div class="tier ${r===cur?"now":""} ${S.results[r]?"done":""}"><span class="t rank tier${r}" style="font-size:1.1rem">${r}等</span><span class="p">${esc(p.name)}・${p.count}名</span></div>`}).join("");
+    return `<div class="tier ${r===cur?"now":""} ${S.results[r]?"done":""}"><span class="t rank tier${r}" style="font-size:1.1rem">${r}等</span><span class="p">${S.results[r]?esc(p.name):"？？？"}・${p.count}名</span></div>`}).join("");
 }
 function prepareStage(){
   const r=S.order[S.idx];
   if(r===undefined){ // finished
     $("rank").className="rank tier1";$("rank").textContent="抽選終了";
     $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
-    $("sub").textContent="";$("balls").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;return;
+    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;return;
   }
   const p=prizeOf(r);
   $("rank").className="rank tier"+r;$("rank").textContent=r+"等";
-  $("prize").className="prize";$("prize").textContent=p.name;
+  $("prize").className="prize";$("prize").textContent="";
+  $("reveal").innerHTML=`<div class="mystery" aria-label="景品は当選発表で公開">？</div>`;
   $("sub").textContent=`${p.count}名を一度に抽選します（残り対象 ${pool().length}名）`;
   const size=p.count<=2?"clamp(3rem,14vw,6rem)":p.count<=5?"clamp(2.2rem,9vw,4rem)":p.count<=15?"clamp(1.4rem,5vw,2.4rem)":"clamp(1.2rem,4vw,2rem)";
   $("balls").style.setProperty("--bs",size);
@@ -241,7 +292,14 @@ $("drawBtn").onclick=()=>{
 function showWinners(r,anim){
   const pad=String(S.max).length;const balls=[...$("balls").children];
   S.results[r].forEach((n,i)=>{if(balls[i]){balls[i].textContent=String(n).padStart(pad,"0");balls[i].classList.add("win","tier"+r);if(!anim)balls[i].style.animation="none";}});
-  $("prize").classList.add("show");
+  const p=prizeOf(r);
+  $("prize").textContent=p.name;$("prize").classList.add("show");
+  const src=imgSrc(r);
+  $("reveal").innerHTML=`<img class="prizeImg tier${r}" alt="${esc(p.name)}">`;
+  const im=$("reveal").querySelector("img");
+  im.onerror=()=>{$("reveal").innerHTML=""};im.src=src;
+  if(!anim)im.style.animation="none";
+  if(anim)Sparkle.burst();
   $("sub").textContent=`当選おめでとうございます！ 番号札をお持ちの方は前へどうぞ`;
   $("drawBtn").hidden=true;$("nextBtn").hidden=false;
   $("nextBtn").textContent=S.idx<S.order.length-1?`次へ（${S.order[S.idx+1]}等）`:"抽選を終える";
@@ -254,9 +312,16 @@ function renderLog(){
 }
 $("setupBtn").onclick=()=>{ if(spinning)return;
   const anyDrawn=Object.keys(S.results).length>0;
-  $("setup").hidden=!$("setup").hidden;renderSetup();
-  $("startBtn").textContent=anyDrawn?"設定を保存して戻る":"この設定で開始";
-  $("setupMsg").textContent=anyDrawn?"抽選済みの結果はそのまま残ります。景品名の修正や、遅れて来た方の分の最大番号の変更ができます。":"受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。";
+  const opening=$("setup").hidden;
+  if(!opening&&!S.started)return; // 開始前は設定画面を閉じない
+  $("setup").hidden=!opening;
+  $("setupBtn").textContent=opening&&S.started?"設定を閉じる":"設定";
+  if(opening){
+    renderSetup();
+    $("startBtn").textContent=anyDrawn?"設定を保存して戻る":"この設定で開始";
+    $("setupMsg").textContent=anyDrawn?"抽選済みの結果はそのまま残ります。景品名の修正や、遅れて来た方の分の最大番号の変更ができます。":"受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。";
+    $("setup").scrollIntoView({behavior:"smooth",block:"start"});
+  }
 };
 let resetArmed=null;
 $("resetBtn").onclick=()=>{
@@ -305,6 +370,20 @@ const Music=(()=>{
 })();
 $("soundBtn").onclick=()=>{const on=Music.toggle();$("soundBtn").textContent=on?"🔊 音あり":"🔇 音なし";if(on)Music.unlock();};
 document.addEventListener("pointerdown",()=>Music.unlock(),{once:true});
+
+/* ---------- sparkles behind the title ---------- */
+const Sparkle=(()=>{
+  const cv=$("sparkles"),cx=cv.getContext("2d");let W,H,pts=[],extra=0;
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function size(){const r=cv.parentElement.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)}
+  function mk(){return{x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+1,p:Math.random()*6.28,v:Math.random()*.03+.01}}
+  function star(x,y,s,a){cx.globalAlpha=a;cx.fillStyle="#ffe7a0";cx.beginPath();cx.moveTo(x,y-s*3);cx.lineTo(x+s*.7,y-s*.7);cx.lineTo(x+s*3,y);cx.lineTo(x+s*.7,y+s*.7);cx.lineTo(x,y+s*3);cx.lineTo(x-s*.7,y+s*.7);cx.lineTo(x-s*3,y);cx.lineTo(x-s*.7,y-s*.7);cx.fill()}
+  function loop(){cx.clearRect(0,0,W,H);const n=26+extra;while(pts.length<n)pts.push(mk());if(pts.length>n)pts.length=n;
+    pts.forEach(q=>{q.p+=q.v*(extra?3:1);const a=Math.max(0,Math.sin(q.p));if(a<.02&&Math.random()<.05)Object.assign(q,mk());star(q.x,q.y,q.s,a*.9)});
+    if(extra>0)extra=Math.max(0,extra-.3);if(!still)requestAnimationFrame(loop)}
+  addEventListener("resize",size);size();loop();
+  return{burst(){extra=60}};
+})();
 
 /* ---------- boot ---------- */
 renderSetup();
