@@ -103,7 +103,46 @@ input[type=number]{font-family:var(--num)}
 .fileBtn{position:relative;overflow:hidden}
 .fileBtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .prizeBlock{display:grid;gap:8px;padding-block:10px;border-bottom:1px solid var(--line)}
-@media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}}
+/* 1等 suspense on stage */
+#stage.suspense{animation:glow 1s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 0 2px var(--gold),0 0 20px rgba(242,193,78,.2)}to{box-shadow:0 0 0 2px var(--gold),0 0 70px rgba(242,193,78,.65)}}
+#stage.suspense .ball:not(.win){border-color:var(--gold);color:var(--fg)}
+
+/* 1等 grand reveal overlay */
+#grand{position:fixed;inset:0;z-index:50;overflow:auto;background:radial-gradient(circle at 50% 38%,#4a3409 0%,#1a1103 55%,#050300 100%);color:#fff7e0;
+  padding-inline:16px;padding-block:calc(env(safe-area-inset-top,0px) + 24px) calc(env(safe-area-inset-bottom,0px) + 24px)}
+#grand .rays{position:fixed;left:50%;top:38%;width:240vmax;height:240vmax;transform:translate(-50%,-50%);pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,rgba(255,214,110,.2) 0deg 6deg,transparent 6deg 15deg);
+  -webkit-mask-image:radial-gradient(circle,#000 0%,transparent 45%);mask-image:radial-gradient(circle,#000 0%,transparent 45%);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+#grand::after{content:"";position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:3}
+#grand.go::after{animation:flash 1s ease-out}
+@keyframes flash{0%{opacity:.95}100%{opacity:0}}
+.grandInner{position:relative;z-index:1;min-height:100%;max-width:960px;margin:0 auto;display:grid;align-content:center;justify-items:center;gap:clamp(10px,2vh,20px);text-align:center}
+.g-eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;letter-spacing:.3em;padding-left:.3em;color:#f2c14e;font-size:clamp(1rem,3vw,1.5rem)}
+.g-rank{font-family:var(--display);font-size:clamp(6rem,30vw,15rem);line-height:.95;letter-spacing:.06em;padding-left:.06em;
+  background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 0 #6b4a12) drop-shadow(0 0 40px rgba(255,200,80,.6))}
+.g-title{font-family:var(--display);font-size:clamp(1.6rem,6vw,3.2rem);letter-spacing:.3em;padding-left:.3em;color:#fff7e0;text-shadow:0 0 18px rgba(255,200,80,.9)}
+.g-nums{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(10px,3vw,24px)}
+.g-num{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;font-size:clamp(3rem,15vw,7.5rem);line-height:1;padding:.12em .3em;border-radius:16px;color:#2a1a00;
+  background:linear-gradient(160deg,#fff4c2,#f2c14e 45%,#b8862b);box-shadow:0 0 0 3px #fff3c4,0 0 44px rgba(255,200,80,.75)}
+.g-img{width:min(440px,100%);max-width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:16px;border:4px solid #f2c14e;box-shadow:0 0 50px rgba(255,200,80,.5)}
+.g-prize{font-family:var(--display);font-size:clamp(1.6rem,6vw,3rem);color:#ffe08a;text-wrap:balance}
+#grandClose{margin-top:8px;background:rgba(0,0,0,.45);border-color:#f2c14e;color:#ffe08a}
+#grand.go .g-eyebrow{animation:fadeUp .6s .2s both}
+#grand.go .g-rank{animation:slam .9s cubic-bezier(.2,1.4,.4,1) both,shine 5s linear .9s infinite}
+#grand.go .g-title{animation:fadeUp .6s .6s both}
+#grand.go .g-num{animation:popBig .7s cubic-bezier(.2,1.6,.4,1) both}
+#grand.go #gImg{animation:fadeUp .8s 1.7s both}
+#grand.go .g-prize{animation:fadeUp .8s 2s both}
+#grand.go #grandClose{animation:fadeUp .6s 2.6s both}
+@keyframes slam{0%{transform:scale(3);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes popBig{0%{transform:scale(.2) rotate(-8deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}
+  #stage.suspense,#grand .rays,#grand.go *,#grand.go::after{animation:none!important}}
 </style>
 </head>
 <body>
@@ -154,6 +193,7 @@ input[type=number]{font-family:var(--num)}
     <div class="controls">
       <button class="btn primary" id="drawBtn" type="button">ルーレット スタート</button>
       <button class="btn" id="nextBtn" type="button" hidden>次の等級へ</button>
+      <button class="btn" id="replayBtn" type="button" hidden>1等の発表をもう一度</button>
     </div>
   </section>
 
@@ -164,6 +204,20 @@ input[type=number]{font-family:var(--num)}
     </div>
     <div id="logRows"></div>
   </section>
+</div>
+
+<div id="grand" hidden role="dialog" aria-modal="true" aria-label="1等 当選発表">
+  <div class="rays"></div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="grandInner">
+    <div class="g-eyebrow">EPDW 創業記念 抽選会</div>
+    <div class="g-rank">1等</div>
+    <div class="g-title">大当たり</div>
+    <div class="g-nums" id="gNums"></div>
+    <div id="gImg"></div>
+    <div class="g-prize" id="gPrize"></div>
+    <button class="btn" id="grandClose" type="button">閉じる</button>
+  </div>
 </div>
 
 <script>
@@ -245,7 +299,7 @@ function prepareStage(){
   if(r===undefined){ // finished
     $("rank").className="rank tier1";$("rank").textContent="抽選終了";
     $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
-    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;return;
+    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;$("replayBtn").hidden=!S.results[1];return;
   }
   const p=prizeOf(r);
   $("rank").className="rank tier"+r;$("rank").textContent=r+"等";
@@ -255,7 +309,7 @@ function prepareStage(){
   const size=p.count<=2?"clamp(3rem,14vw,6rem)":p.count<=5?"clamp(2.2rem,9vw,4rem)":p.count<=15?"clamp(1.4rem,5vw,2.4rem)":"clamp(1.2rem,4vw,2rem)";
   $("balls").style.setProperty("--bs",size);
   $("balls").innerHTML=Array.from({length:p.count},()=>`<div class="ball">${"-".repeat(String(S.max).length)}</div>`).join("");
-  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;
+  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;$("replayBtn").hidden=true;
   if(S.results[r]){showWinners(r,false);}
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -267,28 +321,38 @@ $("drawBtn").onclick=()=>{
   const winners=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);
   spinning=true;$("drawBtn").disabled=true;
   const balls=[...$("balls").children];const pad=String(S.max).length;
-  Music.start();
-  const dur=r===1?6500:r===2?5500:4500; const t0=performance.now();
-  // stop balls one by one near the end
-  const stopAt=balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
-  let last=0;
+  const dur=r===1?16000:r===2?8000:4500; const t0=performance.now();
+  // 1等(2名): 1人目は中盤で確定、2人目は最後まで引っぱる
+  const stopAt=(r===1&&balls.length===2)?[dur*0.5,dur]:balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
+  Music.start(r,dur/1000);
+  if(r===1){$("stage").classList.add("suspense");$("sub").textContent="運命の1等、抽選中…";}
+  let last=0,stopped=0;
   function frame(t){
     const el=t-t0;
-    const interval=60+Math.min(el/dur,1)*120;
+    let interval;
+    if(r===1){ // 止まる直前ほどゆっくり
+      const next=stopAt.find(x=>x>el)??dur, prev=stopAt.filter(x=>x<=el).pop()||0;
+      const k=Math.min(1,(el-prev)/Math.max(1,next-prev));
+      interval=50+Math.pow(k,3)*480;
+    }else interval=60+Math.min(el/dur,1)*120;
     if(t-last>interval){last=t;
       balls.forEach((b,i)=>{if(el<stopAt[i]){b.textContent=String(cand[Math.floor(Math.random()*cand.length)]).padStart(pad,"0");}});
-      Music.tick();
     }
-    balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){b.textContent=String(winners[i]).padStart(pad,"0");b.classList.add("win","tier"+r);Music.ding();}});
+    balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){b.textContent=String(winners[i]).padStart(pad,"0");b.classList.add("win","tier"+r);stopped++;Music.ding(r);
+      if(r===1&&stopped<balls.length)$("sub").textContent=`残り${balls.length-stopped}名…！`;}});
     if(el<dur)requestAnimationFrame(frame);else finish();
   }
   function finish(){
     Music.stop();Music.fanfare(r);
-    S.results[r]=winners;save();spinning=false;
-    showWinners(r,true);renderRail();renderLog();
+    S.results[r]=winners;save();
+    if(r===1){
+      $("sub").textContent="1等 決定！";
+      setTimeout(()=>{$("stage").classList.remove("suspense");spinning=false;showWinners(r,true);renderRail();renderLog();Grand.show(r,winners);},1650);
+    }else{spinning=false;showWinners(r,true);renderRail();renderLog();}
   }
   requestAnimationFrame(frame);
 };
+$("replayBtn").onclick=()=>{if(S.results[1]){Music.fanfare(1);setTimeout(()=>Grand.show(1,S.results[1]),1650);}};
 function showWinners(r,anim){
   const pad=String(S.max).length;const balls=[...$("balls").children];
   S.results[r].forEach((n,i)=>{if(balls[i]){balls[i].textContent=String(n).padStart(pad,"0");balls[i].classList.add("win","tier"+r);if(!anim)balls[i].style.animation="none";}});
@@ -301,7 +365,7 @@ function showWinners(r,anim){
   if(!anim)im.style.animation="none";
   if(anim)Sparkle.burst();
   $("sub").textContent=`当選おめでとうございます！ 番号札をお持ちの方は前へどうぞ`;
-  $("drawBtn").hidden=true;$("nextBtn").hidden=false;
+  $("drawBtn").hidden=true;$("nextBtn").hidden=false;$("replayBtn").hidden=r!==1;
   $("nextBtn").textContent=S.idx<S.order.length-1?`次へ（${S.order[S.idx+1]}等）`:"抽選を終える";
 }
 $("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();};
@@ -333,7 +397,7 @@ $("resetBtn").onclick=()=>{
     return;
   }
   clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
-  Music.stop();
+  Music.stop();Grand.hide();$("stage").classList.remove("suspense");
   S.results={};S.idx=0;S.started=false;save();
   $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
   $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";
@@ -343,27 +407,68 @@ $("resetBtn").onclick=()=>{
 
 /* ---------- sound (Web Audio, no files) ---------- */
 const Music=(()=>{
-  let ctx,on=true,loop=null,master;
-  function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.35;master.connect(ctx.destination);}if(ctx.state==="suspended")ctx.resume();return ctx}
-  function note(f,t,d,type="square",v=.15){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d+.02)}
-  function noise(t,d,v=.12){const c=ac(),b=c.createBuffer(1,c.sampleRate*d,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;const s=c.createBufferSource(),g=c.createGain(),h=c.createBiquadFilter();h.type="highpass";h.frequency.value=5000;s.buffer=b;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(h);h.connect(g);g.connect(master);s.start(t)}
-  // upbeat game-show loop: bass + arpeggio + hi-hat, 150bpm
+  let ctx,on=true,loop=null,master,bus=null;
+  function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.4;
+    const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);}
+    if(ctx.state==="suspended")ctx.resume();return ctx}
+  function note(f,t,d,type="square",v=.15,dst){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.02)}
+  function noise(t,d,v=.12,freq=5000,ftype="highpass",dst){const c=ac(),b=c.createBuffer(1,Math.max(1,c.sampleRate*d|0),c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
+    const s=c.createBufferSource(),g=c.createGain(),h=c.createBiquadFilter();h.type=ftype;h.frequency.value=freq;s.buffer=b;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(h);h.connect(g);g.connect(dst||master);s.start(t)}
+  function brass(fs,t,d,v=.05,dst){const c=ac(),vv=v/Math.sqrt(fs.length);fs.forEach(f=>[-7,0,7].forEach(det=>{const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
+    o.type="sawtooth";o.frequency.value=f;o.detune.value=det;lp.type="lowpass";lp.frequency.setValueAtTime(700,t);lp.frequency.linearRampToValueAtTime(3400,t+.07);lp.frequency.exponentialRampToValueAtTime(1500,t+d);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vv,t+.035);g.gain.setValueAtTime(vv,t+d*.75);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(lp);lp.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.05)}))}
+  function timp(f,t,v=.6,dst){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";o.frequency.setValueAtTime(f*1.4,t);o.frequency.exponentialRampToValueAtTime(f,t+.08);
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+1.3);o.connect(g);g.connect(dst||master);o.start(t);o.stop(t+1.4);noise(t,.15,v*.3,400,"lowpass",dst)}
+  function crash(t,v=.3,d=3,dst){noise(t,d,v,3000,"highpass",dst)}
+  function pad(fs,t,d,v=.02,dst){const c=ac();fs.forEach(f=>[-9,9].forEach(det=>{const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
+    o.type="sawtooth";o.frequency.value=f;o.detune.value=det;lp.type="lowpass";lp.frequency.value=1500;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.4);g.gain.setValueAtTime(v,t+Math.max(.5,d-.2));g.gain.exponentialRampToValueAtTime(.0001,t+d+.25);
+    o.connect(lp);lp.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.3)}))}
+  function newBus(){const c=ac();bus=c.createGain();bus.gain.value=1;bus.connect(master);return bus}
+
+  // 3等・4等・2等: 軽快なゲームショー風ループ
   const bass=[110,110,147,147,131,131,165,165], arp=[440,554,659,880,659,554,494,587,740,587,523,659,784,659,587,494];
-  function startLoop(){const c=ac();const step=60/150/2;let n=0,next=c.currentTime+.05;
+  function startLoop(r){const c=ac(),b=newBus();const step=60/(r===2?132:150)/2;let n=0,next=c.currentTime+.05;
     loop=setInterval(()=>{while(next<c.currentTime+.2){
-      if(n%2===0)note(bass[(n/2|0)%8],next,step*1.8,"triangle",.3);
-      note(arp[n%16],next,step*.8,"square",.06);
-      noise(next,.04,n%4===2?.15:.06);
+      if(n%2===0)note(bass[(n/2|0)%8],next,step*1.8,"triangle",.3,b);
+      note(arp[n%16],next,step*.8,"square",.06,b);
+      noise(next,.04,n%4===2?.15:.06,5000,"highpass",b);
+      if(r===2&&n%8===0)timp(110,next,.35,b);
       n++;next+=step;}},50);}
+
+  // 1等: ドラムロール＋ティンパニ＋盛り上がる弦（だんだん大きく、速く）
+  function grandRoll(sec){const c=ac(),b=newBus(),t0=c.currentTime+.05;
+    b.gain.setValueAtTime(.5,t0);b.gain.linearRampToValueAtTime(1.15,t0+sec);
+    for(let t=0;t<sec;t+=.055)noise(t0+t,.05,.04+.08*(t/sec),1800,"highpass",b);
+    let t=0;while(t<sec){timp(Math.floor(t)%2?55:73.4,t0+t,.5,b);t+=Math.max(.3,1-.7*(t/sec));}
+    const prog=[[220,261.6,329.6,440],[174.6,220,261.6,349.2],[196,246.9,293.7,392],[164.8,207.7,246.9,329.6]];
+    const len=2;let i=0;for(let s=0;s<sec-.2;s+=len,i++){const lift=i>=4?2:1;pad(prog[i%4].map(f=>f*(i>=4&&i%4!==3?1:1)),t0+s,Math.min(len,sec-s),.018*lift,b);}
+    // 最後の数秒で上昇するうなり
+    const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain(),ts=t0+Math.max(0,sec-5);
+    o.type="sawtooth";o.frequency.setValueAtTime(110,ts);o.frequency.exponentialRampToValueAtTime(880,t0+sec);lp.type="lowpass";lp.frequency.value=2000;
+    g.gain.setValueAtTime(.0001,ts);g.gain.exponentialRampToValueAtTime(.05,t0+sec);o.connect(lp);lp.connect(g);g.connect(b);o.start(ts);o.stop(t0+sec+.1);
+  }
+  function grandFanfare(){const c=ac(),t=c.currentTime+.05;
+    [[0,[329.6,659.3],.11],[.13,[329.6,659.3],.11],[.26,[329.6,659.3],.11],[.4,[220,277.2,329.6,440],.55],
+     [1.0,[246.9,329.6,415.3,493.9],.3],[1.33,[277.2,370,440,554.4],.3],[1.7,[110,220,277.2,329.6,440,554.4,659.3],3.4]]
+     .forEach(([d,fs,l])=>brass(fs,t+d,l,.06));
+    timp(110,t+.4,.7);for(let i=0;i<8;i++)timp(110,t+1.02+i*.08,.2+i*.05);timp(55,t+1.7,1);crash(t+1.7,.4,3.8);
+    [880,1108.7,1318.5,1760,2217.5,2637].forEach((f,i)=>note(f,t+1.8+i*.07,1.3,"sine",.09));
+    [[3.4,[220,277.2,329.6,440,554.4]],[3.75,[246.9,329.6,415.3,493.9]],[4.1,[220,277.2,329.6,440,554.4,659.3,880]]]
+      .forEach(([d,fs],k)=>brass(fs,t+d,k===2?3:.3,.05));
+    timp(55,t+4.1,.9);crash(t+4.1,.3,3.5);
+    [1318.5,1760,2217.5,2637,3520].forEach((f,i)=>note(f,t+4.2+i*.06,1.2,"sine",.06));
+  }
   return{
-    start(){if(!on)return;try{startLoop()}catch(e){}},
-    stop(){clearInterval(loop);loop=null},
-    tick(){},
-    ding(){if(!on)return;try{const t=ac().currentTime;note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}catch(e){}},
-    fanfare(r){if(!on)return;try{const t=ac().currentTime+.05;
-      const seq=r<=2?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
-      seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));
-      if(r===1)[1318,1568,2093].forEach((f,i)=>note(f,t+1.5+i*.12,.6,"square",.08));}catch(e){}},
+    start(r,sec){if(!on)return;try{r===1?grandRoll(sec):startLoop(r)}catch(e){}},
+    stop(){clearInterval(loop);loop=null;if(bus&&ctx){const b=bus,n=ctx.currentTime;b.gain.cancelScheduledValues(n);b.gain.setValueAtTime(b.gain.value,n);b.gain.linearRampToValueAtTime(0,n+.12);setTimeout(()=>{try{b.disconnect()}catch(e){}},400);}bus=null},
+    ding(r){if(!on)return;try{const t=ac().currentTime;
+      if(r===1){timp(55,t,1);crash(t,.35,2.5);brass([220,277.2,329.6,440],t,.6,.05);}
+      else{note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}}catch(e){}},
+    fanfare(r){if(!on)return;try{if(r===1){grandFanfare();return}const t=ac().currentTime+.05;
+      const seq=r===2?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
+      seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(r===2)crash(t+.5,.2,1.5);}catch(e){}},
     toggle(){on=!on;if(!on)this.stop();return on},
     unlock(){try{ac()}catch(e){}}
   };
@@ -378,11 +483,35 @@ const Sparkle=(()=>{
   function size(){const r=cv.parentElement.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)}
   function mk(){return{x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+1,p:Math.random()*6.28,v:Math.random()*.03+.01}}
   function star(x,y,s,a){cx.globalAlpha=a;cx.fillStyle="#ffe7a0";cx.beginPath();cx.moveTo(x,y-s*3);cx.lineTo(x+s*.7,y-s*.7);cx.lineTo(x+s*3,y);cx.lineTo(x+s*.7,y+s*.7);cx.lineTo(x,y+s*3);cx.lineTo(x-s*.7,y+s*.7);cx.lineTo(x-s*3,y);cx.lineTo(x-s*.7,y-s*.7);cx.fill()}
-  function loop(){cx.clearRect(0,0,W,H);const n=26+extra;while(pts.length<n)pts.push(mk());if(pts.length>n)pts.length=n;
+  function loop(){cx.clearRect(0,0,W,H);const n=26+Math.round(extra);while(pts.length<n)pts.push(mk());if(pts.length>n)pts.length=n;
     pts.forEach(q=>{q.p+=q.v*(extra?3:1);const a=Math.max(0,Math.sin(q.p));if(a<.02&&Math.random()<.05)Object.assign(q,mk());star(q.x,q.y,q.s,a*.9)});
     if(extra>0)extra=Math.max(0,extra-.3);if(!still)requestAnimationFrame(loop)}
   addEventListener("resize",size);size();loop();
   return{burst(){extra=60}};
+})();
+
+/* ---------- 1等 grand reveal ---------- */
+const Grand=(()=>{
+  const el=$("grand"),cv=$("confetti"),cx=cv.getContext("2d");let run=false,P=[],W=0,H=0;
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const cols=["#f2c14e","#fff3c4","#e4573d","#ffffff","#d9a33a","#46c2b0"];
+  function size(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)}
+  function mk(){return{x:Math.random()*W,y:-20-Math.random()*H,w:6+Math.random()*8,h:10+Math.random()*10,vy:2+Math.random()*3,vx:-1+Math.random()*2,r:Math.random()*6.28,vr:-.2+Math.random()*.4,c:cols[Math.random()*cols.length|0],sw:Math.random()*6.28}}
+  function loop(){if(!run)return;cx.clearRect(0,0,W,H);
+    P.forEach(p=>{p.y+=p.vy;p.sw+=.05;p.x+=p.vx+Math.sin(p.sw)*.8;p.r+=p.vr;if(p.y>H+20){Object.assign(p,mk());p.y=-20;}
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.w/2,-p.h/2,p.w,p.h*Math.abs(Math.cos(p.sw))+1);cx.restore()});
+    requestAnimationFrame(loop)}
+  function show(r,nums){const p=prizeOf(r),pad=String(S.max).length;
+    $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${String(n).padStart(pad,"0")}</div>`).join("");
+    $("gPrize").textContent=p.name;
+    $("gImg").innerHTML=`<img class="g-img" alt="${esc(p.name)}">`;const im=$("gImg").querySelector("img");im.onerror=()=>{$("gImg").innerHTML=""};im.src=imgSrc(r);
+    el.hidden=false;el.scrollTop=0;el.classList.remove("go");void el.offsetWidth;el.classList.add("go");
+    if(!still){size();P=Array.from({length:Math.min(240,Math.round(W*H/4500))},mk);if(!run){run=true;loop()}}}
+  function hide(){el.hidden=true;run=false;cx.clearRect(0,0,W,H)}
+  $("grandClose").onclick=hide;
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&!el.hidden)hide()});
+  addEventListener("resize",()=>{if(run)size()});
+  return{show,hide};
 })();
 
 /* ---------- boot ---------- */
