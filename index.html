@@ -12,6 +12,7 @@
 :root{
   --bg:#12101c; --panel:#1d1a2c; --line:#35304d; --fg:#f3efe6; --muted:#a39db8;
   --gold:#f2c14e; --red:#e4573d; --silver:#c9cbd6; --bronze:#d08a52; --teal:#46c2b0;
+  --t5:#e98bb5; --t6:#6fa8f0; --t7:#a7d36b; --t8:#b39cf0; --t9:#f0a35e; --t10:#7fd6e0;
   --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
   --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
   --num:"Chivo Mono",ui-monospace,Menlo,monospace;
@@ -59,7 +60,7 @@ input[type=number]{font-family:var(--num)}
 .err{color:var(--red);font-weight:700}
 
 /* tier rail */
-.rail{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
 .tier{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel);display:grid;gap:2px;min-width:0}
 .tier .t{font-family:var(--display);font-size:1.1rem}
 .tier .p{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -79,8 +80,9 @@ input[type=number]{font-family:var(--num)}
   min-width:calc(var(--bs,2rem)*2.6);padding:.25em .4em;border-radius:12px;background:var(--bg);border:2px solid var(--line);color:var(--muted)}
 .ball.win{color:var(--bg);background:var(--c,var(--gold));border-color:var(--c,var(--gold));animation:pop .45s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes pop{from{transform:scale(.4)}to{transform:none}}
-.tier1{--c:var(--gold)}.tier2{--c:var(--silver)}.tier3{--c:var(--bronze)}.tier4{--c:var(--teal)}
-.rank.tier1{color:var(--gold)}.rank.tier2{color:var(--silver)}.rank.tier3{color:var(--bronze)}.rank.tier4{color:var(--teal)}
+.tier1{--c:var(--gold)}.tier2{--c:var(--silver)}.tier3{--c:var(--bronze)}.tier4{--c:var(--teal)}.tier5{--c:var(--t5)}.tier6{--c:var(--t6)}.tier7{--c:var(--t7)}.tier8{--c:var(--t8)}.tier9{--c:var(--t9)}.tier10{--c:var(--t10)}
+.rank[class*="tier"]{color:var(--c)}
+.tierBtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
 
 /* log */
@@ -172,7 +174,12 @@ input[type=number]{font-family:var(--num)}
     <div style="display:grid;gap:8px">
       <div class="prizeRow note"><span>等級</span><span>景品名（当選まで非表示）</span><span>当選人数</span></div>
       <div id="prizeRows"></div>
-      <p class="note">景品の写真は「写真を選ぶ」から登録できます（この端末に保存）。GitHubに prize1.jpg〜prize4.jpg を置いても自動で表示されます。</p>
+      <div class="tierBtns">
+        <button class="btn small" id="addTier" type="button">＋ 等級を追加</button>
+        <button class="btn small" id="delTier" type="button">－ 一番下の等級を削除</button>
+        <span class="note" id="tierNote"></span>
+      </div>
+      <p class="note">景品の写真は「写真を選ぶ」から登録できます（この端末に保存）。GitHubに prize1.jpg、prize2.jpg …（等級の数字）を置いても自動で表示されます。</p>
     </div>
     <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
     <div class="controls" style="justify-content:flex-start">
@@ -185,7 +192,7 @@ input[type=number]{font-family:var(--num)}
   </section>
 
   <section id="stage" hidden>
-    <div class="rank" id="rank">4等</div>
+    <div class="rank" id="rank"></div>
     <div class="reveal" id="reveal"></div>
     <div class="prize" id="prize"></div>
     <p class="sub" id="sub"></p>
@@ -228,7 +235,9 @@ const DEFAULT_PRIZES=[
   {rank:4,name:"4等の景品名",count:20},
 ];
 const KEY="lottery-roulette-v1";
-let S={prizes:JSON.parse(JSON.stringify(DEFAULT_PRIZES)),max:80,exclude:"",started:false,results:{},order:[4,3,2,1],idx:0};
+const MAX_TIERS=10;
+function orderOf(prizes){return prizes.map(p=>p.rank).sort((a,b)=>b-a)}
+let S={prizes:JSON.parse(JSON.stringify(DEFAULT_PRIZES)),max:80,exclude:"",started:false,results:{},order:orderOf(DEFAULT_PRIZES),idx:0};
 try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes)S=v;}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const $=id=>document.getElementById(id);
@@ -262,7 +271,16 @@ function renderSetup(){
     catch(e){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
     renderSetup();});
   $("prizeRows").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{keepNames();setImg(+b.dataset.del,"");renderSetup();});
+  const locked=Object.keys(S.results).length>0;
+  $("addTier").disabled=locked||S.prizes.length>=MAX_TIERS;
+  $("delTier").disabled=locked||S.prizes.length<=1;
+  $("tierNote").textContent=locked?"抽選を始めた後は等級の増減はできません（やり直すと変更できます）":`現在 ${S.prizes.length}等級（最大${MAX_TIERS}）`;
 }
+$("addTier").onclick=()=>{if(Object.keys(S.results).length||S.prizes.length>=MAX_TIERS)return;keepNames();
+  const r=S.prizes.length+1;S.prizes.push({rank:r,name:`${r}等の景品名`,count:10});S.order=orderOf(S.prizes);S.idx=0;save();renderSetup();
+  const n=$("pn"+r);if(n){n.focus();n.select();}};
+$("delTier").onclick=()=>{if(Object.keys(S.results).length||S.prizes.length<=1)return;keepNames();
+  S.prizes.pop();S.order=orderOf(S.prizes);S.idx=0;save();renderSetup();};
 function keepNames(){S.prizes.forEach(p=>{const n=$("pn"+p.rank),c=$("pc"+p.rank);if(n)p.name=n.value;if(c)p.count=parseInt(c.value,10)||p.count;});S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function parseExclude(t){return new Set(String(t).split(/[,、\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
@@ -276,9 +294,10 @@ $("startBtn").onclick=()=>{
   S.exclude=$("exclude").value;
   if(!(max>=1)){msg("最大番号を1以上で入れてください。");return;}
   S.max=max;
-  const total=S.prizes.reduce((a,p)=>a+p.count,0);
+  const total=S.prizes.filter(p=>!S.results[p.rank]).reduce((a,p)=>a+p.count,0);
   const avail=pool().length;
   if(total>avail){msg(`当選人数の合計（${total}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
+  if(!Object.keys(S.results).length){S.order=orderOf(S.prizes);S.idx=0;}
   S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
 };
 function msg(t){$("setupMsg").innerHTML=`<span class="err">${t}</span>`}
@@ -372,7 +391,7 @@ $("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();};
 function renderLog(){
   const rows=S.order.filter(r=>S.results[r]).map(r=>{const p=prizeOf(r);
     return `<div class="logRow"><div class="h"><b class="rank tier${r}" style="font-size:1.1rem">${r}等</b><span>${esc(p.name)}</span><span class="note">${S.results[r].length}名</span></div><div class="nums">${S.results[r].join("、")}</div></div>`});
-  $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。4等から順に抽選します。</p>`;
+  $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。${S.order[0]}等から順に抽選します。</p>`;
 }
 $("setupBtn").onclick=()=>{ if(spinning)return;
   const anyDrawn=Object.keys(S.results).length>0;
