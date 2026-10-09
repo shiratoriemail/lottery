@@ -312,6 +312,10 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
         <span class="note" id="tierNote"></span>
       </div>
       <p class="note">写真は「写真を選ぶ」で登録できます（この端末に保存）。GitHubに prize1.jpg、prize2.jpg …（上から何番目か）の名前で置いても表示されます。</p>
+      <h2 style="margin-top:12px">敗者復活・追加抽選の景品（準備）</h2>
+      <p class="note">ここで準備した賞は、通常の抽選の順番には入りません。当日、抽選画面の「＋ 追加抽選」で呼び出し、対象の番号（クイズ正解者など）だけ入れて抽選します。</p>
+      <div id="planRows"></div>
+      <div class="tierBtns"><button class="btn small" id="addPlan" type="button">＋ 追加抽選の賞を準備</button></div>
     </div>
     <div class="shareBox">
       <h2>端末間の共有</h2>
@@ -340,8 +344,10 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
     <p class="sub" id="sub"></p>
     <div class="balls" id="balls"></div>
     <div class="controls">
+      <button class="btn small" id="prevBtn" type="button" hidden>◀ 前の賞へ</button>
       <button class="btn primary" id="drawBtn" type="button">ルーレット スタート</button>
       <button class="btn" id="nextBtn" type="button" hidden>次へ</button>
+      <button class="btn small" id="redoBtn" type="button" hidden>この賞を引き直す</button>
       <button class="btn" id="replayBtn" type="button" hidden>発表をもう一度</button>
       <button class="btn primary" id="sumBtn" type="button" hidden>結果一覧を表示</button>
       <button class="btn small" id="boardBtn" type="button" hidden>全画面で表示</button>
@@ -351,6 +357,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
       <button class="btn small" id="extraBtn" type="button">＋ 追加抽選（敗者復活など）</button>
       <div id="extraPanel" class="extraPanel" hidden>
         <b>追加抽選</b>
+        <label for="exPlan" id="exPlanWrap">設定画面で準備した賞を使う<select id="exPlan"></select></label>
         <div class="pbGrid">
           <label for="exLabel">賞名<input id="exLabel" type="text" value="敗者復活賞"></label>
           <label for="exCount">当選人数<input id="exCount" type="number" min="1" value="1" inputmode="numeric"></label>
@@ -510,10 +517,39 @@ function renderSetup(){
         ${im?`<button class="btn small" type="button" data-del="${p.id}">写真を外す</button>`:""}
       </div>
     </div>`}).join("");
+  renderPlans();
   $("addTier").disabled=locked||n>=MAX_TIERS;$("presetBtn").disabled=locked;
   $("tierNote").textContent=locked?"抽選を始めた後は賞の追加・削除・並べ替えはできません。途中で増やすときは抽選画面の「追加抽選」を使ってください":`現在 ${n}賞（最大${MAX_TIERS}）`;
 }
+const plans=()=>S.extras.filter(q=>q.planned);
+function renderPlans(){
+  const list=plans();
+  $("planRows").innerHTML=list.map(p=>{const im=getImg(p.id);return `
+    <div class="prizeBlock tierRev">
+      <div class="pbHead"><span class="dot"></span><span class="note">追加抽選（未使用）</span>
+        <span class="pbTools"><button class="btn small" type="button" data-rmplan="${p.id}">削除</button></span></div>
+      <div class="pbGrid">
+        <label for="pl_${p.id}">賞名<input id="pl_${p.id}" type="text" value="${esc(p.label)}"></label>
+        <label for="pc_${p.id}">当選人数<input id="pc_${p.id}" type="number" min="1" inputmode="numeric" value="${p.count}"></label>
+        <label for="pn_${p.id}" class="wide">景品名（当選まで非表示）<input id="pn_${p.id}" type="text" value="${esc(p.name)}"></label>
+        <label for="pp_${p.id}">抽選者（任意）<input id="pp_${p.id}" type="text" placeholder="例：COO" value="${esc(p.presenter||"")}"></label>
+        <label for="pfx_${p.id}">演出<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
+        <label for="pbd_${p.id}">番号の全画面表示<select id="pbd_${p.id}">${boardOptions(p.board)}</select></label>
+      </div>
+      <div class="imgCell">
+        ${im?`<img class="thumb" src="${im}" alt="${esc(p.name)}" data-label="${esc(p.label)}" data-name="${esc(p.name)}" title="押すと大きく表示">`:`<span class="note">${p.img?"写真を読み込み中…":"写真なし"}</span>`}
+        <label class="btn small fileBtn" for="pimg_${p.id}">写真を選ぶ<input id="pimg_${p.id}" type="file" accept="image/*" data-id="${p.id}"></label>
+        ${im?`<button class="btn small" type="button" data-del="${p.id}">写真を外す</button>`:""}
+      </div>
+    </div>`}).join("")||`<p class="note">まだありません。</p>`;
+}
+$("addPlan").onclick=()=>{readForm();const id=uid();
+  S.extras.push({id,label:"敗者復活賞",name:"",count:1,presenter:"",fx:"revival",board:"on",only:[],planned:true});
+  save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
 function readForm(){
+  plans().forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
+    p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
+    p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd").value;});
   S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
     p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
     p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd")?g("pbd").value:(p.board==="off"?"off":"on");});
@@ -527,13 +563,20 @@ $("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");i
   else if(d.del){setImg(id,"");const q=prizeOf(id);if(q)q.img=false;Sync.delImg(id);}
   if(!anyDrawn()){S.order=drawOrder();S.idx=0}
   save();renderSetup();});
-$("prizeRows").addEventListener("change",async e=>{const inp=e.target;if(inp.type!=="file")return;const f=inp.files[0];if(!f)return;readForm();
+$("planRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
+  const d=b.dataset;
+  if(d.rmplan){const i=S.extras.findIndex(q=>q.id===d.rmplan&&q.planned);if(i>=0){S.extras.splice(i,1);setImg(d.rmplan,"");Sync.delImg(d.rmplan);}}
+  else if(d.del){setImg(d.del,"");const q=prizeOf(d.del);if(q)q.img=false;Sync.delImg(d.del);}
+  save();renderSetup();});
+async function onPhotoInput(e){const inp=e.target;if(inp.type!=="file")return;const f=inp.files[0];if(!f)return;readForm();
   const id=inp.dataset.id;let d;
   try{d=await resizeFile(f);if(!setImg(id,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
   catch(err){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
   renderSetup();$("setupMsg").textContent="写真を共有サーバーに保存中…";
   try{await Sync.putImg(id,d);const q=prizeOf(id);if(q){q.img=true;save();}$("setupMsg").textContent="写真を保存しました。他の端末でも表示されます。";}
-  catch(err){msg("写真をサーバーに保存できませんでした。この端末には表示されます。通信状態を確認して、もう一度選び直してください。");}});
+  catch(err){msg("写真をサーバーに保存できませんでした。この端末には表示されます。通信状態を確認して、もう一度選び直してください。");}}
+$("prizeRows").addEventListener("change",onPhotoInput);
+$("planRows").addEventListener("change",onPhotoInput);
 $("addTier").onclick=()=>{if(anyDrawn()||S.prizes.length>=MAX_TIERS)return;readForm();
   const id=uid();S.prizes.push({id,label:`${S.prizes.length+1}等`,name:"",count:10,presenter:"",fx:"normal"});
   S.order=drawOrder();S.idx=0;save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
@@ -546,7 +589,7 @@ $("presetBtn").onclick=()=>{if(anyDrawn())return;const b=$("presetBtn");
   $("setupMsg").textContent=`推奨プラン（${S.prizes.length}賞・計${S.prizes.reduce((a,p)=>a+p.count,0)}名）を読み込みました。抽選者や景品名は自由に書き換えられます。`;};
 $("startBtn").onclick=()=>{readForm();
   if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
-  const need=[...S.prizes,...S.extras].filter(p=>!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
+  const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
   if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
   if(!anyDrawn()){S.order=drawOrder();S.idx=0;}
   S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
@@ -572,7 +615,7 @@ function prepareStage(){
     $("presenter").textContent="";
     $("rank").className="rank tier1";$("rank").textContent="抽選終了";
     $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
-    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());setBoard(false);$("boardBtn").hidden=true;$("stagePhotoBtn").hidden=true;$("sumBtn").hidden=!anyDrawn();Summary.refresh();return;
+    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());setBoard(false);$("boardBtn").hidden=true;$("stagePhotoBtn").hidden=true;$("sumBtn").hidden=!anyDrawn();Summary.refresh();updateNav();return;
   }
   const p=prizeOf(id);
   $("stagePhotoBtn").hidden=posOf(id)>=0; // 追加抽選のときだけ、その場で写真を選べる
@@ -587,6 +630,7 @@ function prepareStage(){
   boardOff=false;setBoard(wantBoard(p));
   $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;setReplay(null);$("sumBtn").hidden=true;
   if(S.results[id])showWinners(id,false);
+  updateNav();
 }
 /* ---------- 全画面ボード ---------- */
 const BOARD_MIN=15; // これより人数が多い賞は全画面で番号を大きく表示
@@ -615,7 +659,7 @@ let spinning=false;
 $("drawBtn").onclick=()=>{
   if(spinning)return;const id=S.order[S.idx],p=prizeOf(id);
   const cand=pool(p);if(cand.length<p.count){$("sub").textContent=`抽選対象が足りません（対象 ${cand.length}名）。`;return;}
-  spinning=true;$("drawBtn").disabled=true;$("extraBtn").disabled=true;$("extraPanel").hidden=true;
+  spinning=true;$("drawBtn").disabled=true;$("extraBtn").disabled=true;$("extraPanel").hidden=true;updateNav();
   if(isBig(p.fx))countdown(p,()=>spin(id,p,cand));else spin(id,p,cand);
 };
 function countdown(p,done){
@@ -671,11 +715,24 @@ function showWinners(id,anim){
   $("drawBtn").hidden=true;$("nextBtn").hidden=false;setReplay(isBig(p.fx)?id:null);
   const nx=prizeOf(S.order[S.idx+1]);
   $("nextBtn").textContent=nx?`次へ（${nx.label}）`:"抽選を終える";
+  updateNav();
 }
 $("stagePhotoFile").onchange=async()=>{const f=$("stagePhotoFile").files[0];$("stagePhotoFile").value="";if(!f)return;
   const id=S.order[S.idx];if(!id)return;let d;
   try{d=await resizeFile(f);}catch(e){$("sub").textContent="この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。";return;}
   await attachPhoto(id,d,$("sub"));if(S.results[id])showWinners(id,false);};
+function updateNav(){const id=S.order[S.idx];
+  $("prevBtn").hidden=spinning||S.idx<=0;
+  $("redoBtn").hidden=spinning||!id||!S.results[id];
+  if(!$("prevBtn").hidden){const pv=prizeOf(S.order[S.idx-1]);$("prevBtn").textContent=pv?`◀ 前の賞へ（${pv.label}）`:"◀ 前の賞へ";}}
+$("prevBtn").onclick=()=>{if(spinning||S.idx<=0)return;Grand.hide();S.idx--;save();renderRail();prepareStage();};
+let redoArmed=null;
+$("redoBtn").onclick=()=>{const id=S.order[S.idx];if(spinning||!id||!S.results[id])return;const b=$("redoBtn");
+  if(!redoArmed){b.textContent="もう一度押すと、この賞の結果を消して引き直します";b.classList.add("danger");
+    redoArmed=setTimeout(()=>{redoArmed=null;b.textContent="この賞を引き直す";b.classList.remove("danger")},4000);return}
+  clearTimeout(redoArmed);redoArmed=null;b.textContent="この賞を引き直す";b.classList.remove("danger");
+  delete S.results[id];save();renderRail();renderLog();prepareStage();
+  $("sub").textContent=`${prizeOf(id).label}の結果を取り消しました。もう一度「ルーレット スタート」を押してください。`;};
 $("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();if(S.order[S.idx]===undefined&&anyDrawn())Summary.show();};
 
 /* ---------- 追加抽選（敗者復活など） ---------- */
@@ -698,17 +755,28 @@ async function attachPhoto(id,data,msgEl){ // 写真をこの端末と共有サ�
   try{await Sync.putImg(id,data);const q=prizeOf(id);if(q){q.img=true;save();}return true}
   catch(e){if(msgEl)msgEl.innerHTML=`<span class="err">写真を共有サーバーに保存できませんでした。この端末には表示されます。</span>`;return false}
 }
+let exPlanId="";
+function exPlanUI(){const list=plans();$("exPlanWrap").hidden=!list.length;
+  $("exPlan").innerHTML=`<option value="">使わない（ここで新しく入力する）</option>`+list.map(q=>`<option value="${q.id}">${esc(q.label)}${q.name?"（"+esc(q.name)+"）":""}・${q.count}名</option>`).join("");
+  $("exPlan").value=list.some(q=>q.id===exPlanId)?exPlanId:"";}
+$("exPlan").onchange=()=>{exPlanId=$("exPlan").value;const q=prizeOf(exPlanId);if(!q)return;
+  $("exLabel").value=q.label;$("exName").value=q.name||"";$("exCount").value=q.count;$("exPres").value=q.presenter||"";
+  $("exFx").value=q.fx||"revival";$("exBoard").value=q.board==="off"?"off":"on";exPhoto=getImg(q.id)||"";exPhotoUI();
+  $("exMsg").textContent="準備した内容を読み込みました。対象の番号を入れて「この抽選を次に行う」を押してください。";$("exOnly").focus();};
 $("extraBtn").onclick=()=>{if(spinning)return;const pn=$("extraPanel");pn.hidden=!pn.hidden;
-  if(!pn.hidden){exPhotoUI();$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切りで入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
+  if(!pn.hidden){exPlanUI();if(!exPlanId&&plans().length){exPlanId=plans()[0].id;$("exPlan").value=exPlanId;$("exPlan").onchange();}exPhotoUI();$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切りで入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
 $("exCancel").onclick=()=>{$("extraPanel").hidden=true;requestAnimationFrame(fitBalls)};
 $("exGo").onclick=()=>{if(spinning)return;
   const count=Math.max(1,parseInt($("exCount").value,10)||1),only=[...parseNums($("exOnly").value)];
-  const p={id:uid(),label:$("exLabel").value.trim()||"追加抽選",name:$("exName").value.trim(),count,presenter:$("exPres").value.trim(),fx:$("exFx").value,board:$("exBoard").value,only};
+  const planned=prizeOf(exPlanId);
+  const fields={label:$("exLabel").value.trim()||"追加抽選",name:$("exName").value.trim(),count,presenter:$("exPres").value.trim(),fx:$("exFx").value,board:$("exBoard").value,only};
+  const p=planned&&planned.planned?Object.assign(planned,fields):Object.assign({id:uid()},fields);
   const avail=pool(p).length;
   if(avail<count){$("exMsg").innerHTML=`<span class="err">対象が${avail}名しかいません（当選済み・欠席の番号は除かれます）。人数か対象の番号を見直してください。</span>`;return;}
-  const photo=exPhoto;if(photo)p.img=true;
-  S.extras.push(p);if(photo)attachPhoto(p.id,photo,$("exMsg"));
-  exPhoto="";const cur=S.order[S.idx];
+  const photo=exPhoto,isPlan=!!p.planned;
+  if(isPlan){delete p.planned;}else S.extras.push(p);
+  if(photo&&photo!==getImg(p.id)){p.img=true;attachPhoto(p.id,photo,$("exMsg"));}
+  exPhoto="";exPlanId="";const cur=S.order[S.idx];
   if(cur===undefined||!S.results[cur])S.order.splice(S.idx,0,p.id);else{S.order.splice(S.idx+1,0,p.id);S.idx++;}
   save();renderRail();renderLog();prepareStage();
   $("exOnly").value="";$("stage").scrollIntoView({behavior:"smooth",block:"start"});
@@ -910,7 +978,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/09-14";
+const PAGE_VERSION="10/09-15";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1007,7 +1075,7 @@ const Sync=(()=>{
     catch(e){lastErr=errText(e);info();m.textContent="読み込めませんでした："+lastErr;}}
   $("applyBtn").onclick=async()=>{
     if(spinning)return;readForm();
-    const need=[...S.prizes,...S.extras].filter(p=>!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
+    const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
     if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
     const b=$("applyBtn");b.disabled=true;b.textContent="反映中…";
     await sendNow($("setupMsg"));
