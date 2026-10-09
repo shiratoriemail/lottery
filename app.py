@@ -22,7 +22,8 @@ from flask_cors import CORS
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 REPO = os.environ.get("GITHUB_REPO", "shiratoriemail/lottery")
 BRANCH = os.environ.get("DATA_BRANCH", "lottery-data")
-ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+# 入力ミス（前後の空白・末尾の / ・改行）があっても通るように整える
+ORIGINS = [o.strip().rstrip("/") for o in re.split(r"[,\s]+", os.environ.get("ALLOWED_ORIGINS", "*")) if o.strip()] or ["*"]
 
 API = f"https://api.github.com/repos/{REPO}"
 HEADERS = {
