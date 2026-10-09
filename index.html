@@ -31,6 +31,8 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .sync[data-kind="ok"]::before{background:var(--teal)}
 .sync[data-kind="wait"]::before,.sync[data-kind="warn"]::before{background:var(--gold)}
 .sync[data-kind="off"]::before{background:var(--red)}
+.syncChoice{background:var(--panel);border:2px solid var(--gold);border-radius:14px;padding:16px;display:grid;gap:8px}
+.syncChoice p{margin:0}
 .title{position:relative;text-align:center;padding-block:8px 18px;display:grid;gap:6px;justify-items:center;overflow:hidden}
 .title .eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;font-size:clamp(1.1rem,3.6vw,1.9rem);letter-spacing:.3em;color:var(--gold);
   display:flex;align-items:center;gap:.8em;padding-left:.3em}
@@ -187,6 +189,14 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
     <span class="sync" id="syncStatus" data-kind="wait" role="status">接続中…</span>
     <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
     <button class="btn small" id="setupBtn" type="button">設定</button>
+  </div>
+  <div class="syncChoice" id="syncChoice" hidden>
+    <p><b>この端末の設定と、共有サーバーの設定が違います。</b>どちらを使いますか？</p>
+    <p class="note" id="syncChoiceInfo"></p>
+    <div class="controls" style="justify-content:flex-start">
+      <button class="btn" id="useLocal" type="button">この端末の設定を使う（共有サーバーを上書き）</button>
+      <button class="btn" id="useServer" type="button">共有サーバーの設定を使う</button>
+    </div>
   </div>
   <header class="title">
     <canvas id="sparkles" aria-hidden="true"></canvas>
@@ -699,7 +709,8 @@ function refreshAll(){
 }
 const Sync=(()=>{
   const el=$("syncStatus");
-  let rev=parseInt(lsGet(REVKEY)||"0",10)||0,dirty=lsGet(DIRTYKEY)==="1",ver=0,timer=null,busy=false,reached=false,first=true,imgsChecked=false;
+  let rev=parseInt(lsGet(REVKEY)||"0",10)||0,dirty=lsGet(DIRTYKEY)==="1",ver=0,timer=null,busy=false,reached=false,first=true,imgsChecked=false,choosing=false;
+  const hadLocal=lsGet(KEY)!==null; // この端末で以前に設定したことがあるか
   const status=(kind,text)=>{el.dataset.kind=kind;el.textContent=text};
   async function call(path,opt={},ms=70000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
     try{return await fetch(API_BASE+path,{...opt,signal:c.signal,cache:"no-store",headers:opt.body?{"Content-Type":"application/json"}:{}})}finally{clearTimeout(t)}}
@@ -708,7 +719,7 @@ const Sync=(()=>{
   function canAdopt(){if(spinning)return false;const a=document.activeElement;
     return !(a&&a.closest&&a.closest("#setup,#extraPanel")&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
   function adopt(state,r){S=migrate(state);setRev(r);markDirty(false);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}refreshAll();fetchImgs();}
-  function schedule(){ver++;markDirty(true);status("wait","保存待ち…");clearTimeout(timer);timer=setTimeout(push,700);}
+  function schedule(){ver++;markDirty(true);if(choosing)return;status("wait","保存待ち…");clearTimeout(timer);timer=setTimeout(push,700);}
   async function push(){
     clearTimeout(timer);
     if(busy){timer=setTimeout(push,400);return}
@@ -724,17 +735,30 @@ const Sync=(()=>{
     }catch(e){reached=false;status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
     finally{busy=false}
   }
+  const sig=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));return JSON.stringify([m.prizes.map(p=>[p.label,p.name,p.count,p.presenter,p.fx]),m.max,m.exclude,m.results,m.extras,m.started])}catch(e){return ""}};
+  const summary=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));const done=Object.keys(m.results||{}).length;
+    return `${m.prizes.map(p=>p.label).join("・")}／最大番号 ${m.max}${done?`／抽選済み ${done}賞`:""}`}catch(e){return ""}};
+  function askChoice(j){
+    choosing=true;status("warn","どちらの設定を使うか選んでください");
+    $("syncChoiceInfo").textContent=`この端末：${summary(S)}　｜　共有サーバー：${summary(j.state)}`;
+    $("syncChoice").hidden=false;$("syncChoice").scrollIntoView({behavior:"smooth",block:"start"});
+    $("useLocal").onclick=()=>{$("syncChoice").hidden=true;choosing=false;setRev(j.rev);ver++;markDirty(true);push();};
+    $("useServer").onclick=()=>{$("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);status("ok","共有中");};
+  }
   async function pull(){
-    if(busy||document.hidden)return;
+    if(busy||choosing||document.hidden)return;
     if(!reached)status("wait",first?"サーバーに接続中…（起動に最大1分）":"再接続中…");
     busy=true;let next=null;
     try{
       const r=await call("/api/state");if(!r.ok)throw new Error(r.status);
       const j=await r.json();reached=true;
-      if(j.state&&j.rev>rev){if(canAdopt()){const had=dirty;adopt(j.state,j.rev);if(had)status("warn","他の端末の変更を読み込みました");}}
+      if(j.state&&j.rev>rev){
+        // この端末で一度も共有していない設定があり、内容が違うときは、どちらを使うか選んでもらう
+        if(rev===0&&(hadLocal||dirty)&&sig(S)!==sig(j.state))askChoice(j);
+        else if(canAdopt()){const had=dirty;adopt(j.state,j.rev);if(had)status("warn","他の端末の変更を読み込みました");}}
       else if(j.rev<rev){setRev(j.rev);next=push;}      // サーバー側のデータが消えていた → この端末の内容で作り直す
-      else if(dirty||!j.state)next=push;                 // 未送信の変更、または最初の1台
-      if(!dirty&&!next&&el.dataset.kind!=="warn")status("ok","共有中");
+      else if(dirty||(!j.state&&hadLocal))next=push;     // 未送信の変更、または設定済みの最初の1台
+      if(!dirty&&!next&&!choosing&&el.dataset.kind!=="warn")status("ok","共有中");
     }catch(e){reached=false;status("off","サーバーに接続できません（この端末に保存中）");}
     finally{busy=false;first=false}
     if(next)await next();
