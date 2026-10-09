@@ -35,6 +35,8 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .syncChoice p{margin:0}
 .shareBox{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
 .shareBox h2{margin:0;font-size:1rem}
+.btn.apply{background:var(--gold);border-color:var(--gold);color:#241a00;font-family:var(--display);font-weight:400;font-size:1.15rem;padding:14px 22px;letter-spacing:.04em}
+.btn.apply:disabled{opacity:.5}
 #syncStatus{cursor:pointer;background:none;border:0;padding:0;font:inherit}
 .title{position:relative;text-align:center;padding-block:8px 18px;display:grid;gap:6px;justify-items:center;overflow:hidden}
 .title .eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;font-size:clamp(1.1rem,3.6vw,1.9rem);letter-spacing:.3em;color:var(--gold);
@@ -233,13 +235,13 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
       <h2>端末間の共有</h2>
       <p class="note" id="shareInfo">確認中…</p>
       <div class="controls" style="justify-content:flex-start">
-        <button class="btn small" id="sendNow" type="button">この端末の設定を共有サーバーに送る</button>
         <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
       </div>
       <p class="note" id="shareMsg"></p>
     </div>
     <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
     <div class="controls" style="justify-content:flex-start">
+      <button class="btn apply" id="applyBtn" type="button">設定を全端末に反映する</button>
       <button class="btn primary" id="startBtn" type="button">この設定で開始</button>
     </div>
   </section>
@@ -790,12 +792,13 @@ const Sync=(()=>{
     for(const p of S.prizes){const d=getImg(p.id);if(d&&!p.img){try{await putImg(p.id,d);p.img=true;save();}catch(e){}}}}
   async function putImg(id,data){const r=await call("/api/img/"+id,{method:"PUT",body:JSON.stringify({data})});if(!r.ok)throw new Error(r.status)}
   async function delImg(id){try{await call("/api/img/"+id,{method:"DELETE"})}catch(e){}}
-  async function sendNow(){ // この端末の内容でサーバーを上書き
-    if(spinning)return;const m=$("shareMsg");m.textContent="送信中…（サーバーが眠っていると最大1分かかります）";
+  async function sendNow(m){ // この端末の内容でサーバーを上書き（＝全端末に反映）
+    if(spinning)return false;m=m||$("shareMsg");m.textContent="反映中…（サーバーが眠っていると最大1分かかります）";
     try{const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);const j=await r.json();
       serverRev=j.rev;setRev(j.rev);ver++;markDirty(true);$("syncChoice").hidden=true;choosing=false;await push();
-      m.textContent=dirty?"送信できませんでした。もう一度押してください。":`送信しました（第${rev}版）。他の端末には数秒で反映されます。`;}
-    catch(e){lastErr=errText(e);info();m.textContent="送信できませんでした："+lastErr;}}
+      if(dirty){m.innerHTML=`<span class="err">反映できませんでした：${esc(lastErr||"通信できません")}。もう一度押してください。</span>`;return false}
+      m.textContent=`全端末に反映しました（第${rev}版・${hhmmss(new Date())}）。他の端末は数秒で切り替わります。`;return true;}
+    catch(e){lastErr=errText(e);info();m.innerHTML=`<span class="err">反映できませんでした：${esc(lastErr)}</span>`;return false}}
   async function loadNow(){ // サーバーの内容でこの端末を上書き
     if(spinning)return;const m=$("shareMsg");m.textContent="読み込み中…（サーバーが眠っていると最大1分かかります）";
     try{const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);const j=await r.json();
@@ -804,15 +807,17 @@ const Sync=(()=>{
       $("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);$("setup").hidden=false;renderSetup();status("ok","共有中");
       $("shareMsg").textContent=`共有サーバーの設定（第${j.rev}版）を読み込みました。`;}
     catch(e){lastErr=errText(e);info();m.textContent="読み込めませんでした："+lastErr;}}
-  let sendArmed=null;
-  $("sendNow").onclick=()=>{const b=$("sendNow");
-    if(!sendArmed){b.textContent="もう一度押すと共有サーバーを上書きします";b.classList.add("danger");
-      sendArmed=setTimeout(()=>{sendArmed=null;b.textContent="この端末の設定を共有サーバーに送る";b.classList.remove("danger")},4000);return}
-    clearTimeout(sendArmed);sendArmed=null;b.textContent="この端末の設定を共有サーバーに送る";b.classList.remove("danger");readForm();sendNow();};
+  $("applyBtn").onclick=async()=>{
+    if(spinning)return;readForm();
+    const need=[...S.prizes,...S.extras].filter(p=>!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
+    if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
+    const b=$("applyBtn");b.disabled=true;b.textContent="反映中…";
+    await sendNow($("setupMsg"));
+    b.disabled=false;b.textContent="設定を全端末に反映する";};
   $("loadNow").onclick=()=>loadNow();
   el.onclick=()=>{first=false;pull();};
   syncHook=schedule;
-  return {pull,putImg,delImg,fetchImgs,info};
+  return {pull,putImg,delImg,fetchImgs,info,sendNow};
 })();
 
 /* ---------- boot ---------- */
