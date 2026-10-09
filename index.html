@@ -33,6 +33,9 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .sync[data-kind="off"]::before{background:var(--red)}
 .syncChoice{background:var(--panel);border:2px solid var(--gold);border-radius:14px;padding:16px;display:grid;gap:8px}
 .syncChoice p{margin:0}
+.shareBox{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.shareBox h2{margin:0;font-size:1rem}
+#syncStatus{cursor:pointer;background:none;border:0;padding:0;font:inherit}
 .title{position:relative;text-align:center;padding-block:8px 18px;display:grid;gap:6px;justify-items:center;overflow:hidden}
 .title .eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;font-size:clamp(1.1rem,3.6vw,1.9rem);letter-spacing:.3em;color:var(--gold);
   display:flex;align-items:center;gap:.8em;padding-left:.3em}
@@ -186,7 +189,7 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
 
 <div class="wrap">
   <div class="topbar">
-    <span class="sync" id="syncStatus" data-kind="wait" role="status">接続中…</span>
+    <button class="sync" id="syncStatus" data-kind="wait" type="button" aria-live="polite" title="押すと今すぐ確認します">接続中…</button>
     <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
     <button class="btn small" id="setupBtn" type="button">設定</button>
   </div>
@@ -225,6 +228,15 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
         <span class="note" id="tierNote"></span>
       </div>
       <p class="note">写真は「写真を選ぶ」で登録できます（この端末に保存）。GitHubに prize1.jpg、prize2.jpg …（上から何番目か）の名前で置いても表示されます。</p>
+    </div>
+    <div class="shareBox">
+      <h2>端末間の共有</h2>
+      <p class="note" id="shareInfo">確認中…</p>
+      <div class="controls" style="justify-content:flex-start">
+        <button class="btn small" id="sendNow" type="button">この端末の設定を共有サーバーに送る</button>
+        <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
+      </div>
+      <p class="note" id="shareMsg"></p>
     </div>
     <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
     <div class="controls" style="justify-content:flex-start">
@@ -698,7 +710,9 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const API_BASE="https://epdw-lottery.onrender.com";
+const PAGE_VERSION="10/09-7";
+// Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
+const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -711,7 +725,12 @@ const Sync=(()=>{
   const el=$("syncStatus");
   let rev=parseInt(lsGet(REVKEY)||"0",10)||0,dirty=lsGet(DIRTYKEY)==="1",ver=0,timer=null,busy=false,reached=false,first=true,imgsChecked=false,choosing=false;
   const hadLocal=lsGet(KEY)!==null; // この端末で以前に設定したことがあるか
-  const status=(kind,text)=>{el.dataset.kind=kind;el.textContent=text};
+  let serverRev=null,lastOk=null,lastErr="";
+  const status=(kind,text)=>{el.dataset.kind=kind;el.textContent=text;info();};
+  const hhmmss=d=>d?d.toLocaleTimeString("ja-JP",{hour12:false}):"—";
+  function info(){const b=$("shareInfo");if(!b)return;
+    b.textContent=`共有サーバー：${serverRev===null?"未接続":"接続OK（第"+serverRev+"版）"}　この端末：第${rev}版${dirty?"・未送信の変更あり":""}　最終確認 ${hhmmss(lastOk)}${lastErr?"　エラー："+lastErr:""}　ページ ${PAGE_VERSION}`;}
+  const errText=e=>e&&e.name==="AbortError"?"時間切れ（サーバー起動中の可能性）":(e&&e.message)||"通信できません";
   async function call(path,opt={},ms=70000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
     try{return await fetch(API_BASE+path,{...opt,signal:c.signal,cache:"no-store",headers:opt.body?{"Content-Type":"application/json"}:{}})}finally{clearTimeout(t)}}
   const markDirty=v=>{dirty=v;lsSet(DIRTYKEY,v?"1":"0")};
@@ -730,9 +749,9 @@ const Sync=(()=>{
       if(r.status===409){
         if(j.state){adopt(j.state,j.rev);status("warn","他の端末の変更を読み込みました");setTimeout(()=>{if(!dirty)status("ok","共有中")},4000);}
         else{setRev(j.rev||0);busy=false;await push();return}
-      }else if(r.ok){setRev(j.rev);reached=true;markDirty(ver!==sent);status(dirty?"wait":"ok",dirty?"保存待ち…":"共有中（保存済み）");if(dirty)timer=setTimeout(push,300);}
-      else throw new Error(r.status);
-    }catch(e){reached=false;status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
+      }else if(r.ok){setRev(j.rev);serverRev=j.rev;lastOk=new Date();lastErr="";reached=true;markDirty(ver!==sent);status(dirty?"wait":"ok",dirty?"保存待ち…":"共有中（保存済み）");if(dirty)timer=setTimeout(push,300);}
+      else throw new Error((j&&j.error)||("サーバーエラー "+r.status));
+    }catch(e){reached=false;lastErr=errText(e);status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
     finally{busy=false}
   }
   const sig=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));return JSON.stringify([m.prizes.map(p=>[p.label,p.name,p.count,p.presenter,p.fx]),m.max,m.exclude,m.results,m.extras,m.started])}catch(e){return ""}};
@@ -750,8 +769,8 @@ const Sync=(()=>{
     if(!reached)status("wait",first?"サーバーに接続中…（起動に最大1分）":"再接続中…");
     busy=true;let next=null;
     try{
-      const r=await call("/api/state");if(!r.ok)throw new Error(r.status);
-      const j=await r.json();reached=true;
+      const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);
+      const j=await r.json();reached=true;serverRev=j.rev;lastOk=new Date();lastErr="";
       if(j.state&&j.rev>rev){
         // この端末で一度も共有していない設定があり、内容が違うときは、どちらを使うか選んでもらう
         if(rev===0&&(hadLocal||dirty)&&sig(S)!==sig(j.state))askChoice(j);
@@ -759,8 +778,8 @@ const Sync=(()=>{
       else if(j.rev<rev){setRev(j.rev);next=push;}      // サーバー側のデータが消えていた → この端末の内容で作り直す
       else if(dirty||(!j.state&&hadLocal))next=push;     // 未送信の変更、または設定済みの最初の1台
       if(!dirty&&!next&&!choosing&&el.dataset.kind!=="warn")status("ok","共有中");
-    }catch(e){reached=false;status("off","サーバーに接続できません（この端末に保存中）");}
-    finally{busy=false;first=false}
+    }catch(e){reached=false;lastErr=errText(e);status("off","サーバーに接続できません（この端末に保存中）");}
+    finally{busy=false;first=false;info();}
     if(next)await next();
     if(reached&&!imgsChecked){imgsChecked=true;uploadLocalImgs();}
   }
@@ -771,8 +790,29 @@ const Sync=(()=>{
     for(const p of S.prizes){const d=getImg(p.id);if(d&&!p.img){try{await putImg(p.id,d);p.img=true;save();}catch(e){}}}}
   async function putImg(id,data){const r=await call("/api/img/"+id,{method:"PUT",body:JSON.stringify({data})});if(!r.ok)throw new Error(r.status)}
   async function delImg(id){try{await call("/api/img/"+id,{method:"DELETE"})}catch(e){}}
+  async function sendNow(){ // この端末の内容でサーバーを上書き
+    if(spinning)return;const m=$("shareMsg");m.textContent="送信中…（サーバーが眠っていると最大1分かかります）";
+    try{const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);const j=await r.json();
+      serverRev=j.rev;setRev(j.rev);ver++;markDirty(true);$("syncChoice").hidden=true;choosing=false;await push();
+      m.textContent=dirty?"送信できませんでした。もう一度押してください。":`送信しました（第${rev}版）。他の端末には数秒で反映されます。`;}
+    catch(e){lastErr=errText(e);info();m.textContent="送信できませんでした："+lastErr;}}
+  async function loadNow(){ // サーバーの内容でこの端末を上書き
+    if(spinning)return;const m=$("shareMsg");m.textContent="読み込み中…（サーバーが眠っていると最大1分かかります）";
+    try{const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);const j=await r.json();
+      serverRev=j.rev;lastOk=new Date();
+      if(!j.state){m.textContent="共有サーバーにはまだ設定がありません。設定した端末で「送る」を押してください。";info();return;}
+      $("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);$("setup").hidden=false;renderSetup();status("ok","共有中");
+      $("shareMsg").textContent=`共有サーバーの設定（第${j.rev}版）を読み込みました。`;}
+    catch(e){lastErr=errText(e);info();m.textContent="読み込めませんでした："+lastErr;}}
+  let sendArmed=null;
+  $("sendNow").onclick=()=>{const b=$("sendNow");
+    if(!sendArmed){b.textContent="もう一度押すと共有サーバーを上書きします";b.classList.add("danger");
+      sendArmed=setTimeout(()=>{sendArmed=null;b.textContent="この端末の設定を共有サーバーに送る";b.classList.remove("danger")},4000);return}
+    clearTimeout(sendArmed);sendArmed=null;b.textContent="この端末の設定を共有サーバーに送る";b.classList.remove("danger");readForm();sendNow();};
+  $("loadNow").onclick=()=>loadNow();
+  el.onclick=()=>{first=false;pull();};
   syncHook=schedule;
-  return {pull,putImg,delImg,fetchImgs};
+  return {pull,putImg,delImg,fetchImgs,info};
 })();
 
 /* ---------- boot ---------- */

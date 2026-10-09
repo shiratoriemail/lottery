@@ -16,7 +16,7 @@ import re
 import threading
 
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -140,7 +140,34 @@ def on_store_error(e):
     return jsonify({"error": str(e)}), 502
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+@app.after_request
+def no_cache(resp):
+    # 端末やブラウザに古いデータ・古いページを残さない
+    if request.path.startswith("/api/") or request.path in ("/", "/index.html"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.get("/")
+@app.get("/index.html")
+def page():
+    """抽選ページ本体。リポジトリの index.html をそのまま返す"""
+    if os.path.exists(os.path.join(BASE_DIR, "index.html")):
+        return send_from_directory(BASE_DIR, "index.html")
+    return health()
+
+
+@app.get("/prize<int:n>.<ext>")
+def prize_file(n, ext):
+    name = f"prize{n}.{ext}"
+    if ext.lower() not in ("jpg", "jpeg", "png", "webp") or not os.path.exists(os.path.join(BASE_DIR, name)):
+        return jsonify({"error": "写真がありません"}), 404
+    return send_from_directory(BASE_DIR, name)
+
+
 @app.get("/api/health")
 def health():
     return jsonify({"ok": True, "repo": REPO, "branch": BRANCH, "token": bool(TOKEN)})
