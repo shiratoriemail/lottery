@@ -147,8 +147,9 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
 .prizeBlock{display:grid;gap:10px;padding-block:14px;border-bottom:1px solid var(--line)}
 /* 人数が多い賞：全画面ボード表示（番号を画面いっぱいに） */
 body.noscroll{overflow:hidden}
+body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 8px)}
 #stage.board{position:fixed;inset:0;z-index:30;margin:0;border:0;border-radius:0;height:100%;max-width:none;box-sizing:border-box;overflow:hidden;
-  padding:calc(env(safe-area-inset-top,0px) + 14px) 24px calc(env(safe-area-inset-bottom,0px) + 10px);
+  padding:calc(env(safe-area-inset-top,0px) + 50px) 24px calc(env(safe-area-inset-bottom,0px) + 10px);
   display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr) auto auto;
   grid-template-areas:"img pres" "img rank" "img prize" "img sub" "balls balls" "ctrl ctrl" "extra extra";
   column-gap:28px;row-gap:6px;align-items:center;justify-items:center;min-height:0}
@@ -166,6 +167,26 @@ body.noscroll{overflow:hidden}
 @media (max-aspect-ratio:1/1){
   #stage.board{grid-template-columns:minmax(0,1fr);grid-template-areas:"pres" "rank" "img" "prize" "sub" "balls" "ctrl" "extra";grid-template-rows:auto auto auto auto auto minmax(0,1fr) auto auto}
   #stage.board #reveal .mystery,#stage.board .prizeImg{height:min(16vh,200px)}}
+/* 結果一覧（1画面にまとめて表示） */
+#summary{position:fixed;inset:0;z-index:40;--u:16px;font-size:var(--u);box-sizing:border-box;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 0%,#2d2546 0%,var(--bg) 70%);color:var(--fg);
+  padding:calc(env(safe-area-inset-top,0px) + .8em) 1.2em calc(env(safe-area-inset-bottom,0px) + .8em);display:grid;grid-template-rows:auto minmax(0,1fr);gap:.8em}
+.sumHead{display:flex;align-items:center;justify-content:space-between;gap:1em}
+.sumTitle{display:flex;align-items:baseline;gap:.8em;flex-wrap:wrap}
+.sumEyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;color:var(--gold);letter-spacing:.2em;font-size:1em}
+.sumMain{font-family:var(--display);font-size:2em;letter-spacing:.1em;
+  background:linear-gradient(100deg,#b8862b,#ffe9a8 30%,#f2c14e 55%,#ffe08a 80%,#b8862b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sumGrid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));grid-auto-flow:row dense;gap:.8em;align-content:start;min-height:0}
+.sumCard{display:flex;gap:.8em;align-items:flex-start;padding:.7em;border:2px solid var(--c,var(--line));border-radius:.8em;background:rgba(18,16,28,.75);min-width:0}
+.sumCard.w2{grid-column:span 2}.sumCard.wall{grid-column:1/-1}
+.sumImg{flex:none;width:7.5em;aspect-ratio:4/3;object-fit:cover;border-radius:.5em;border:1px solid var(--line);cursor:zoom-in;background:var(--bg)}
+.sumBody{display:grid;gap:.35em;min-width:0}
+.sumLabel{font-family:var(--display);font-size:1.5em;line-height:1.1;color:var(--c)}
+.sumLabel small{font-family:var(--body);font-size:.5em;color:var(--muted);margin-left:.6em;letter-spacing:0}
+.sumName{font-family:var(--display);font-size:1.05em;color:var(--fg)}
+.sumNums{display:flex;flex-wrap:wrap;gap:.3em}
+.sumNums span{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;font-size:1.15em;line-height:1;padding:.22em .35em;border-radius:.3em;background:var(--c);color:var(--bg)}
+.sumCard.wall .sumImg,.sumCard.w2 .sumImg{width:9em}
 /* 写真の拡大表示 */
 .prizeImg,.g-img,.thumb{cursor:zoom-in}
 .zoomHint{font-size:.8rem;color:var(--muted);margin-top:-4px}
@@ -296,6 +317,7 @@ body.noscroll{overflow:hidden}
       <button class="btn primary" id="drawBtn" type="button">ルーレット スタート</button>
       <button class="btn" id="nextBtn" type="button" hidden>次へ</button>
       <button class="btn" id="replayBtn" type="button" hidden>発表をもう一度</button>
+      <button class="btn primary" id="sumBtn" type="button" hidden>結果一覧を表示</button>
       <button class="btn small" id="boardBtn" type="button" hidden>全画面で表示</button>
     </div>
     <div class="extraWrap">
@@ -309,6 +331,7 @@ body.noscroll{overflow:hidden}
           <label for="exOnly" class="wide">対象の番号（クイズ正解者など。空欄なら、まだ当選していない全員）<input id="exOnly" type="text" placeholder="例：12,45,103"></label>
           <label for="exPres">抽選者（任意）<input id="exPres" type="text" placeholder="例：COO"></label>
           <label for="exFx">演出<select id="exFx"></select></label>
+          <label for="exBoard">番号の全画面表示<select id="exBoard"></select></label>
         </div>
         <p class="note" id="exMsg">今の抽選の次に差し込まれます。</p>
         <div class="controls" style="justify-content:flex-start">
@@ -323,6 +346,7 @@ body.noscroll{overflow:hidden}
     <div class="foot">
       <h2>当選番号一覧</h2>
       <div class="controls">
+        <button class="btn small" id="sumBtn2" type="button" hidden>結果一覧を表示</button>
         <button class="btn small" id="copyBtn" type="button" hidden>結果をコピー</button>
         <button class="btn small" id="resetBtn" type="button">最初からやり直す</button>
       </div>
@@ -333,6 +357,14 @@ body.noscroll{overflow:hidden}
 </div>
 
 <div id="countdown" hidden aria-live="assertive"></div>
+
+<div id="summary" hidden role="dialog" aria-modal="true" aria-label="抽選結果">
+  <div class="sumHead">
+    <div class="sumTitle"><span class="sumEyebrow">EPDW 創業記念 抽選会</span><span class="sumMain">抽選結果</span></div>
+    <button class="btn small" id="sumClose" type="button">閉じる</button>
+  </div>
+  <div class="sumGrid" id="sumGrid"></div>
+</div>
 
 <div id="photoView" hidden role="dialog" aria-modal="true" aria-label="景品の写真">
   <img id="photoImg" alt="">
@@ -359,6 +391,8 @@ body.noscroll{overflow:hidden}
 const KEY="lottery-roulette-v1";
 const MAX_TIERS=10;
 const FX={grand:"豪華",mid:"やや豪華",normal:"通常"};
+const BOARD={auto:"自動（16名以上で全画面）",on:"全画面にする",off:"全画面にしない"};
+const boardOptions=sel=>Object.entries(BOARD).map(([k,v])=>`<option value="${k}" ${(sel||"auto")===k?"selected":""}>${v}</option>`).join("");
 const PRESET_LABEL="推奨プランを読み込む";
 const PRESET=[
   {label:"創業記念特賞",name:"旅行券 5万円",count:1,fx:"grand"},
@@ -431,6 +465,7 @@ function renderSetup(){
         <label for="pn_${p.id}" class="wide">景品名（当選まで非表示）<input id="pn_${p.id}" type="text" value="${esc(p.name)}"></label>
         <label for="pp_${p.id}">抽選者（任意）<input id="pp_${p.id}" type="text" placeholder="例：代表取締役社長" value="${esc(p.presenter||"")}"></label>
         <label for="pfx_${p.id}">演出（豪華＝カウントダウン＋全画面発表）<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
+        <label for="pbd_${p.id}">番号の全画面表示<select id="pbd_${p.id}">${boardOptions(p.board)}</select></label>
       </div>
       <div class="imgCell">
         ${im?`<img class="thumb" src="${im}" alt="${esc(p.name)}" data-label="${esc(p.label)}" data-name="${esc(p.name)}" title="押すと大きく表示">`:`<span class="note">${p.img?"写真を読み込み中…":"写真なし"}</span>`}
@@ -444,7 +479,7 @@ function renderSetup(){
 function readForm(){
   S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
     p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
-    p.presenter=g("pp").value.trim();p.fx=g("pfx").value;});
+    p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd")?g("pbd").value:(p.board||"auto");});
   S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();
 }
 $("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
@@ -500,7 +535,7 @@ function prepareStage(){
     $("presenter").textContent="";
     $("rank").className="rank tier1";$("rank").textContent="抽選終了";
     $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
-    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());setBoard(false);$("boardBtn").hidden=true;return;
+    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());setBoard(false);$("boardBtn").hidden=true;$("sumBtn").hidden=!anyDrawn();Summary.refresh();return;
   }
   const p=prizeOf(id);
   $("presenter").textContent=p.presenter?`抽選者　${p.presenter}`:"";
@@ -511,24 +546,25 @@ function prepareStage(){
   const c=p.count,size=c<=2?"clamp(3rem,14vw,6rem)":c<=5?"clamp(2.2rem,9vw,4rem)":c<=15?"clamp(1.4rem,5vw,2.4rem)":c<=30?"clamp(1.2rem,4vw,2rem)":"clamp(1rem,3.2vw,1.6rem)";
   $("balls").style.setProperty("--bs",size);$("balls").dataset.base=size;
   $("balls").innerHTML=Array.from({length:c},()=>`<div class="ball"><span class="bn">${"-".repeat(digits())}</span></div>`).join("");
-  boardOff=false;setBoard(c>BOARD_MIN);
-  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;setReplay(null);
+  boardOff=false;setBoard(wantBoard(p));
+  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;setReplay(null);$("sumBtn").hidden=true;
   if(S.results[id])showWinners(id,false);
 }
 /* ---------- 全画面ボード ---------- */
 const BOARD_MIN=15; // これより人数が多い賞は全画面で番号を大きく表示
 let boardOff=false;
+function wantBoard(p){const m=p.board||"auto";return m==="on"||(m==="auto"&&p.count>BOARD_MIN);}
 function setBoard(on){
-  const st=$("stage"),many=($("balls").children.length>BOARD_MIN);
-  on=on&&!boardOff;st.classList.toggle("board",on);document.body.classList.toggle("noscroll",on);
-  $("boardBtn").hidden=!many;$("boardBtn").textContent=on?"通常の表示に戻す":"全画面で表示";
+  const st=$("stage"),has=$("balls").children.length>0;
+  on=on&&!boardOff&&has;st.classList.toggle("board",on);document.body.classList.toggle("noscroll",on);
+  $("boardBtn").hidden=!has;$("boardBtn").textContent=on?"通常の表示に戻す":"全画面で表示";
   requestAnimationFrame(fitBalls);
 }
 function fitBalls(){
   const box=$("balls");if(!box.children.length)return;
   if(!$("stage").classList.contains("board")){if(box.dataset.base)box.style.setProperty("--bs",box.dataset.base);return}
   // 枠に収まる最大の文字サイズを二分探索で求める
-  let lo=10,hi=260;
+  let lo=10,hi=Math.min(260,box.clientHeight*0.55);
   for(let i=0;i<12;i++){const mid=(lo+hi)/2;box.style.setProperty("--bs",mid+"px");
     if(box.scrollHeight<=box.clientHeight+1&&box.scrollWidth<=box.clientWidth+1)lo=mid;else hi=mid;}
   box.style.setProperty("--bs",Math.floor(lo)+"px");
@@ -598,16 +634,16 @@ function showWinners(id,anim){
   const nx=prizeOf(S.order[S.idx+1]);
   $("nextBtn").textContent=nx?`次へ（${nx.label}）`:"抽選を終える";
 }
-$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();};
+$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();if(S.order[S.idx]===undefined&&anyDrawn())Summary.show();};
 
 /* ---------- 追加抽選（敗者復活など） ---------- */
-$("exFx").innerHTML=fxOptions("mid");
+$("exFx").innerHTML=fxOptions("mid");$("exBoard").innerHTML=boardOptions("auto");
 $("extraBtn").onclick=()=>{if(spinning)return;const pn=$("extraPanel");pn.hidden=!pn.hidden;
   if(!pn.hidden){$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切りで入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
 $("exCancel").onclick=()=>{$("extraPanel").hidden=true;requestAnimationFrame(fitBalls)};
 $("exGo").onclick=()=>{if(spinning)return;
   const count=Math.max(1,parseInt($("exCount").value,10)||1),only=[...parseNums($("exOnly").value)];
-  const p={id:uid(),label:$("exLabel").value.trim()||"追加抽選",name:$("exName").value.trim(),count,presenter:$("exPres").value.trim(),fx:$("exFx").value,only};
+  const p={id:uid(),label:$("exLabel").value.trim()||"追加抽選",name:$("exName").value.trim(),count,presenter:$("exPres").value.trim(),fx:$("exFx").value,board:$("exBoard").value,only};
   const avail=pool(p).length;
   if(avail<count){$("exMsg").innerHTML=`<span class="err">対象が${avail}名しかいません（当選済み・欠席の番号は除かれます）。人数か対象の番号を見直してください。</span>`;return;}
   S.extras.push(p);const cur=S.order[S.idx];
@@ -622,7 +658,7 @@ function renderLog(){
     return `<div class="logRow"><div class="h"><b class="rank ${tierCls(id)}">${esc(p.label)}</b><span>${esc(p.name||"")}</span><span class="note">${S.results[id].length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</span></div><div class="nums">${S.results[id].map(n=>fmt(n)).join("、")}</div></div>`});
   const first=prizeOf(S.order[0]);
   $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。${first?esc(first.label):""}から順に抽選します。</p>`;
-  $("copyBtn").hidden=!rows.length;$("copyBox").hidden=true;
+  $("copyBtn").hidden=!rows.length;$("sumBtn2").hidden=!rows.length;$("copyBox").hidden=true;Summary.refresh();
 }
 $("copyBtn").onclick=async()=>{
   const lines=["賞名\t景品\t番号"];
@@ -655,7 +691,7 @@ $("resetBtn").onclick=()=>{
     return;
   }
   clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
-  Music.stop();Grand.hide();$("stage").classList.remove("suspense");setBoard(false);
+  Music.stop();Grand.hide();Summary.hide();$("stage").classList.remove("suspense");setBoard(false);
   S.results={};S.extras=[];S.order=drawOrder();S.idx=0;S.started=false;save();
   $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
   $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";$("setupBtn").textContent="設定";
@@ -777,7 +813,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/09-9";
+const PAGE_VERSION="10/09-11";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -821,7 +857,7 @@ const Sync=(()=>{
     }catch(e){reached=false;lastErr=errText(e);status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
     finally{busy=false}
   }
-  const sig=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));return JSON.stringify([m.prizes.map(p=>[p.label,p.name,p.count,p.presenter,p.fx]),m.max,m.exclude,m.results,m.extras,m.started])}catch(e){return ""}};
+  const sig=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));return JSON.stringify([m.prizes.map(p=>[p.label,p.name,p.count,p.presenter,p.fx,p.board||"auto"]),m.max,m.exclude,m.results,m.extras,m.started])}catch(e){return ""}};
   const summary=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));const done=Object.keys(m.results||{}).length;
     return `${m.prizes.map(p=>p.label).join("・")}／最大番号 ${m.max}${done?`／抽選済み ${done}賞`:""}`}catch(e){return ""}};
   function askChoice(j){
@@ -885,6 +921,41 @@ const Sync=(()=>{
   return {pull,putImg,delImg,fetchImgs,info,sendNow};
 })();
 
+/* ---------- 結果一覧 ---------- */
+const Summary=(()=>{
+  const el=$("summary"),grid=$("sumGrid");
+  function render(){
+    const ids=S.order.filter(id=>S.results[id]&&prizeOf(id)).slice().reverse(); // 格上の賞から
+    const total=ids.reduce((a,id)=>a+S.results[id].length,0);
+    const n=ids.length,cols=n<=2?n:(n<=4?2:(innerWidth>innerHeight?3:2));
+    grid.style.setProperty("--cols",Math.max(1,cols));
+    grid.innerHTML=ids.map(id=>{const p=prizeOf(id),cls=tierCls(id),nums=S.results[id],src=imgSrc(id);
+      const w=nums.length>12?"wall":"";
+      return `<div class="sumCard ${cls} ${w}">
+        ${src?`<img class="sumImg" src="${esc(src)}" alt="${esc(p.name)}" data-label="${esc(p.label)}" data-name="${esc(p.name)}" title="押すと大きく表示">`:""}
+        <div class="sumBody"><div class="sumLabel">${esc(p.label)}<small>${nums.length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</small></div>
+        ${p.name?`<div class="sumName">${esc(p.name)}</div>`:""}
+        <div class="sumNums">${nums.map(x=>`<span>${fmt(x)}</span>`).join("")}</div></div></div>`}).join("")
+      ||`<p class="note">まだ当選者はいません。</p>`;
+    grid.querySelectorAll("img").forEach(im=>{im.onerror=()=>{im.remove();fit()};im.onload=()=>fit();});
+    $("sumClose").title=`当選 計${total}名`;
+  }
+  function fit(){ // 1画面に収まる最大の文字サイズ
+    if(el.hidden)return;let lo=6,hi=40;
+    for(let i=0;i<12;i++){const mid=(lo+hi)/2;el.style.setProperty("--u",mid+"px");
+      if(grid.scrollHeight<=grid.clientHeight+1&&grid.scrollWidth<=grid.clientWidth+1)lo=mid;else hi=mid;}
+    el.style.setProperty("--u",Math.floor(lo*10)/10+"px");
+  }
+  function show(){render();el.hidden=false;document.body.classList.add("noscroll");requestAnimationFrame(fit);$("sumClose").focus({preventScroll:true});}
+  function hide(){el.hidden=true;if(!$("stage").classList.contains("board"))document.body.classList.remove("noscroll");}
+  $("sumClose").onclick=hide;
+  addEventListener("resize",()=>{if(!el.hidden){render();requestAnimationFrame(fit)}});
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&!el.hidden&&$("photoView").hidden)hide()});
+  return{show,hide,isOpen:()=>!el.hidden,refresh:()=>{if(!el.hidden){render();requestAnimationFrame(fit)}}};
+})();
+$("sumBtn").onclick=()=>Summary.show();
+$("sumBtn2").onclick=()=>Summary.show();
+
 /* ---------- 写真の拡大表示 ---------- */
 function openPhoto(img){
   $("photoImg").src=img.currentSrc||img.src;$("photoImg").alt=img.alt||"";
@@ -892,7 +963,7 @@ function openPhoto(img){
   $("photoView").hidden=false;$("photoClose").focus({preventScroll:true});
 }
 function closePhoto(){$("photoView").hidden=true;$("photoImg").removeAttribute("src");}
-document.addEventListener("click",e=>{const img=e.target.closest&&e.target.closest("img.prizeImg,img.g-img,img.thumb");
+document.addEventListener("click",e=>{const img=e.target.closest&&e.target.closest("img.prizeImg,img.g-img,img.thumb,img.sumImg");
   if(img&&img.src){e.preventDefault();e.stopPropagation();openPhoto(img);}});
 $("photoView").addEventListener("click",closePhoto);
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("photoView").hidden){e.stopImmediatePropagation();closePhoto();}},true);
