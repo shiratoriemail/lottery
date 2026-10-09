@@ -25,7 +25,12 @@ body{font-family:var(--body);font-size:16px;line-height:1.6;padding-inline:16px;
 .wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 /* gorgeous title */
-.topbar{display:flex;justify-content:flex-end;gap:8px}
+.topbar{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px}
+.sync{margin-right:auto;font-size:.8rem;color:var(--muted);display:inline-flex;align-items:center;gap:6px;min-width:0}
+.sync::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync[data-kind="ok"]::before{background:var(--teal)}
+.sync[data-kind="wait"]::before,.sync[data-kind="warn"]::before{background:var(--gold)}
+.sync[data-kind="off"]::before{background:var(--red)}
 .title{position:relative;text-align:center;padding-block:8px 18px;display:grid;gap:6px;justify-items:center;overflow:hidden}
 .title .eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;font-size:clamp(1.1rem,3.6vw,1.9rem);letter-spacing:.3em;color:var(--gold);
   display:flex;align-items:center;gap:.8em;padding-left:.3em}
@@ -179,6 +184,7 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
 
 <div class="wrap">
   <div class="topbar">
+    <span class="sync" id="syncStatus" data-kind="wait" role="status">接続中…</span>
     <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
     <button class="btn small" id="setupBtn" type="button">設定</button>
   </div>
@@ -199,9 +205,6 @@ select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outlin
         <input id="exclude" type="text" placeholder="なし">
       </label>
     </div>
-    <label for="roster">参加者名簿（任意）　1行に「番号 氏名」。入れると名簿の番号から抽選し、当選時に氏名も表示します
-      <textarea id="roster" rows="3" placeholder="001 山田 太郎&#10;002 佐藤 花子"></textarea>
-    </label>
     <div style="display:grid;gap:4px">
       <h2>賞と景品</h2>
       <p class="note">上ほど格上の賞です。抽選は一番下の賞から始まり、一番上の賞で終わります。</p>
@@ -303,7 +306,7 @@ function defaults(){return [
   {id:"t2",label:"2等",name:"2等の景品名",count:5,presenter:"",fx:"mid"},
   {id:"t3",label:"3等",name:"3等の景品名",count:15,presenter:"",fx:"normal"},
   {id:"t4",label:"4等",name:"4等の景品名",count:20,presenter:"",fx:"normal"}]}
-let S={prizes:defaults(),extras:[],roster:"",max:80,exclude:"",started:false,results:{},order:[],idx:0};
+let S={prizes:defaults(),extras:[],max:80,exclude:"",started:false,results:{},order:[],idx:0};
 function drawOrder(){return S.prizes.map(p=>p.id).reverse()}
 S.order=drawOrder();
 function migrate(v){
@@ -312,14 +315,15 @@ function migrate(v){
     ps.forEach(p=>{try{const d=localStorage.getItem("lottery-img-"+p.rank);if(d&&!localStorage.getItem("lottery-img-t"+p.rank))localStorage.setItem("lottery-img-t"+p.rank,d)}catch(e){}});
     const res={};Object.keys(v.results||{}).forEach(r=>{res["t"+r]=v.results[r]});
     v={prizes:ps.map(p=>({id:"t"+p.rank,label:p.rank+"等",name:p.name,count:p.count,presenter:"",fx:p.rank===1?"grand":p.rank===2?"mid":"normal"})),
-       extras:[],roster:"",max:v.max||80,exclude:v.exclude||"",started:!!v.started,results:res,order:(v.order||[]).map(r=>"t"+r),idx:v.idx||0};
+       extras:[],max:v.max||80,exclude:v.exclude||"",started:!!v.started,results:res,order:(v.order||[]).map(r=>"t"+r),idx:v.idx||0};
     if(!v.order.length)v.order=v.prizes.map(p=>p.id).reverse();
   }
-  v.extras=v.extras||[];v.roster=v.roster||"";v.results=v.results||{};
+  v.extras=v.extras||[];v.results=v.results||{};delete v.roster;
   return v;
 }
 try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes&&v.prizes.length)S=migrate(v);}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+let syncHook=null;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}if(syncHook)syncHook();}
 const $=id=>document.getElementById(id);
 const IMGKEY=id=>"lottery-img-"+id;
 function getImg(id){try{return localStorage.getItem(IMGKEY(id))||""}catch(e){return ""}}
@@ -330,11 +334,8 @@ function resizeFile(file){return new Promise((ok,ng)=>{const fr=new FileReader()
   c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.82))};im.onerror=ng;im.src=fr.result};fr.onerror=ng;fr.readAsDataURL(file)})}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function parseNums(t){return new Set(String(t).split(/[,、，\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
-function parseRoster(t){const m=new Map();String(t||"").split(/\r?\n/).forEach(l=>{const x=l.match(/^\s*(\d+)[\s,、，:：\t]*(.*)$/);if(x)m.set(parseInt(x[1],10),x[2].trim())});return m}
-let ROSTER=parseRoster(S.roster);
-const nameOf=n=>ROSTER.get(n)||"";
-function basePool(){if(ROSTER.size)return [...ROSTER.keys()].sort((a,b)=>a-b);const a=[];for(let i=1;i<=S.max;i++)a.push(i);return a}
-function digits(){return String(ROSTER.size?Math.max(...ROSTER.keys()):S.max).length}
+function basePool(){const a=[];for(let i=1;i<=S.max;i++)a.push(i);return a}
+function digits(){return String(S.max).length}
 const fmt=n=>String(n).padStart(digits(),"0");
 function pool(p){const ex=parseNums(S.exclude),won=new Set(Object.values(S.results).flat());
   let a=basePool().filter(i=>!ex.has(i)&&!won.has(i));
@@ -348,7 +349,7 @@ const fxOptions=sel=>Object.entries(FX).map(([k,v])=>`<option value="${k}" ${sel
 
 /* ---------- setup ---------- */
 function renderSetup(){
-  $("maxNum").value=S.max;$("exclude").value=S.exclude;$("roster").value=S.roster;
+  $("maxNum").value=S.max;$("exclude").value=S.exclude;
   const locked=anyDrawn(),n=S.prizes.length;
   $("prizeRows").innerHTML=S.prizes.map((p,i)=>{const im=getImg(p.id),done=!!S.results[p.id];return `
     <div class="prizeBlock ${tierCls(p.id)}">
@@ -366,7 +367,7 @@ function renderSetup(){
         <label for="pfx_${p.id}">演出（豪華＝カウントダウン＋全画面発表）<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
       </div>
       <div class="imgCell">
-        ${im?`<img class="thumb" src="${im}" alt="">`:`<span class="note">写真なし</span>`}
+        ${im?`<img class="thumb" src="${im}" alt="">`:`<span class="note">${p.img?"写真を読み込み中…":"写真なし"}</span>`}
         <label class="btn small fileBtn" for="pimg_${p.id}">写真を選ぶ<input id="pimg_${p.id}" type="file" accept="image/*" data-id="${p.id}"></label>
         ${im?`<button class="btn small" type="button" data-del="${p.id}">写真を外す</button>`:""}
       </div>
@@ -378,20 +379,23 @@ function readForm(){
   S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
     p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
     p.presenter=g("pp").value.trim();p.fx=g("pfx").value;});
-  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;S.roster=$("roster").value;ROSTER=parseRoster(S.roster);save();
+  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();
 }
 $("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
   const d=b.dataset,id=d.up||d.down||d.rm||d.del,i=posOf(id);
   if(d.up&&i>0)[S.prizes[i-1],S.prizes[i]]=[S.prizes[i],S.prizes[i-1]];
   else if(d.down&&i<S.prizes.length-1)[S.prizes[i+1],S.prizes[i]]=[S.prizes[i],S.prizes[i+1]];
   else if(d.rm&&!anyDrawn())S.prizes.splice(i,1);
-  else if(d.del)setImg(id,"");
+  else if(d.del){setImg(id,"");const q=prizeOf(id);if(q)q.img=false;Sync.delImg(id);}
   if(!anyDrawn()){S.order=drawOrder();S.idx=0}
   save();renderSetup();});
 $("prizeRows").addEventListener("change",async e=>{const inp=e.target;if(inp.type!=="file")return;const f=inp.files[0];if(!f)return;readForm();
-  try{const d=await resizeFile(f);if(!setImg(inp.dataset.id,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
+  const id=inp.dataset.id;let d;
+  try{d=await resizeFile(f);if(!setImg(id,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
   catch(err){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
-  renderSetup();});
+  renderSetup();$("setupMsg").textContent="写真を共有サーバーに保存中…";
+  try{await Sync.putImg(id,d);const q=prizeOf(id);if(q){q.img=true;save();}$("setupMsg").textContent="写真を保存しました。他の端末でも表示されます。";}
+  catch(err){msg("写真をサーバーに保存できませんでした。この端末には表示されます。通信状態を確認して、もう一度選び直してください。");}});
 $("addTier").onclick=()=>{if(anyDrawn()||S.prizes.length>=MAX_TIERS)return;readForm();
   const id=uid();S.prizes.push({id,label:`${S.prizes.length+1}等`,name:"",count:10,presenter:"",fx:"normal"});
   S.order=drawOrder();S.idx=0;save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
@@ -403,9 +407,9 @@ $("presetBtn").onclick=()=>{if(anyDrawn())return;const b=$("presetBtn");
   readForm();S.prizes=PRESET.map(p=>({...p,id:uid(),presenter:""}));S.order=drawOrder();S.idx=0;save();renderSetup();
   $("setupMsg").textContent=`推奨プラン（${S.prizes.length}賞・計${S.prizes.reduce((a,p)=>a+p.count,0)}名）を読み込みました。抽選者や景品名は自由に書き換えられます。`;};
 $("startBtn").onclick=()=>{readForm();
-  if(!ROSTER.size&&!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
+  if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
   const need=[...S.prizes,...S.extras].filter(p=>!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
-  if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か${ROSTER.size?"名簿":"最大番号"}を見直してください。`);return;}
+  if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
   if(!anyDrawn()){S.order=drawOrder();S.idx=0;}
   S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
 };
@@ -440,7 +444,7 @@ function prepareStage(){
   $("sub").textContent=`${p.count}名を一度に抽選します（対象 ${pool(p).length}名${p.only&&p.only.length?"・指定の番号のみ":""}）`;
   const c=p.count,size=c<=2?"clamp(3rem,14vw,6rem)":c<=5?"clamp(2.2rem,9vw,4rem)":c<=15?"clamp(1.4rem,5vw,2.4rem)":c<=30?"clamp(1.2rem,4vw,2rem)":"clamp(1rem,3.2vw,1.6rem)";
   $("balls").style.setProperty("--bs",size);
-  $("balls").innerHTML=Array.from({length:c},()=>`<div class="ball"><span class="bn">${"-".repeat(digits())}</span><span class="bnm"></span></div>`).join("");
+  $("balls").innerHTML=Array.from({length:c},()=>`<div class="ball"><span class="bn">${"-".repeat(digits())}</span></div>`).join("");
   $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;setReplay(null);
   if(S.results[id])showWinners(id,false);
 }
@@ -478,7 +482,7 @@ function spin(id,p,cand){
     if(t-last>interval){last=t;
       balls.forEach((b,i)=>{if(el<stopAt[i])b.firstChild.textContent=fmt(cand[Math.floor(Math.random()*cand.length)]);});}
     balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){
-      b.firstChild.textContent=fmt(winners[i]);b.lastChild.textContent=nameOf(winners[i]);b.classList.add("win",cls);stopped++;Music.ding(p.fx);
+      b.firstChild.textContent=fmt(winners[i]);b.classList.add("win",cls);stopped++;Music.ding(p.fx);
       if(grand&&stopped<balls.length)$("sub").textContent=`残り${balls.length-stopped}名…！`;}});
     if(el<dur)requestAnimationFrame(frame);else finish();
   }
@@ -494,7 +498,7 @@ function spin(id,p,cand){
 $("replayBtn").onclick=()=>{const id=$("replayBtn").dataset.id;if(id&&S.results[id]){Music.fanfare("grand");setTimeout(()=>Grand.show(id,S.results[id]),1650);}};
 function showWinners(id,anim){
   const p=prizeOf(id),cls=tierCls(id),balls=[...$("balls").children];
-  S.results[id].forEach((n,i)=>{const b=balls[i];if(!b)return;b.firstChild.textContent=fmt(n);b.lastChild.textContent=nameOf(n);b.classList.add("win",cls);if(!anim)b.style.animation="none";});
+  S.results[id].forEach((n,i)=>{const b=balls[i];if(!b)return;b.firstChild.textContent=fmt(n);b.classList.add("win",cls);if(!anim)b.style.animation="none";});
   $("prize").textContent=p.name;$("prize").classList.toggle("show",!!p.name);
   const src=imgSrc(id);
   if(src){$("reveal").innerHTML=`<img class="prizeImg ${cls}" alt="${esc(p.name)}">`;const im=$("reveal").querySelector("img");
@@ -527,14 +531,14 @@ $("exGo").onclick=()=>{if(spinning)return;
 /* ---------- log ---------- */
 function renderLog(){
   const rows=S.order.filter(id=>S.results[id]).map(id=>{const p=prizeOf(id);
-    return `<div class="logRow"><div class="h"><b class="rank ${tierCls(id)}">${esc(p.label)}</b><span>${esc(p.name||"")}</span><span class="note">${S.results[id].length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</span></div><div class="nums">${S.results[id].map(n=>esc(fmt(n)+(nameOf(n)?" "+nameOf(n):""))).join("、")}</div></div>`});
+    return `<div class="logRow"><div class="h"><b class="rank ${tierCls(id)}">${esc(p.label)}</b><span>${esc(p.name||"")}</span><span class="note">${S.results[id].length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</span></div><div class="nums">${S.results[id].map(n=>fmt(n)).join("、")}</div></div>`});
   const first=prizeOf(S.order[0]);
   $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。${first?esc(first.label):""}から順に抽選します。</p>`;
   $("copyBtn").hidden=!rows.length;$("copyBox").hidden=true;
 }
 $("copyBtn").onclick=async()=>{
-  const lines=["賞名\t景品\t番号\t氏名"];
-  S.order.filter(id=>S.results[id]).forEach(id=>{const p=prizeOf(id);S.results[id].forEach(n=>lines.push([p.label,p.name||"",fmt(n),nameOf(n)].join("\t")))});
+  const lines=["賞名\t景品\t番号"];
+  S.order.filter(id=>S.results[id]).forEach(id=>{const p=prizeOf(id);S.results[id].forEach(n=>lines.push([p.label,p.name||"",fmt(n)].join("\t")))});
   const t=lines.join("\n"),b=$("copyBtn"),box=$("copyBox");
   try{await navigator.clipboard.writeText(t);box.hidden=true;b.textContent="コピーしました";setTimeout(()=>{b.textContent="結果をコピー"},2000);}
   catch(e){box.hidden=false;box.value=t;box.focus();box.select();b.textContent="下の枠を長押ししてコピーしてください";}
@@ -670,7 +674,7 @@ const Grand=(()=>{
   function show(id,nums){const p=prizeOf(id),len=[...p.label].length;
     const gr=$("gRank");gr.textContent=p.label;gr.style.fontSize=len<=2?"":`min(${Math.floor(86/len)}vw,${Math.max(3,Math.round(26/len*10)/10)}rem)`;
     $("gPres").textContent=p.presenter?`抽選者　${p.presenter}`:"";el.setAttribute("aria-label",`${p.label} 当選発表`);
-    $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${fmt(n)}${nameOf(n)?`<small>${esc(nameOf(n))}</small>`:""}</div>`).join("");
+    $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${fmt(n)}</div>`).join("");
     $("gPrize").textContent=p.name;
     const src=imgSrc(id);$("gImg").innerHTML="";
     if(src){$("gImg").innerHTML=`<img class="g-img" alt="${esc(p.name)}">`;const im=$("gImg").querySelector("img");im.onerror=()=>{$("gImg").innerHTML=""};im.src=src;}
@@ -683,9 +687,76 @@ const Grand=(()=>{
   return{show,hide};
 })();
 
+/* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
+const API_BASE="https://epdw-lottery.onrender.com";
+const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function refreshAll(){
+  const setupOpen=!$("setup").hidden;
+  if(S.started){showMain();if(setupOpen){$("setup").hidden=false;renderSetup();$("setupBtn").textContent="設定を閉じる";}}
+  else{$("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;renderSetup();$("setupBtn").textContent="設定";}
+}
+const Sync=(()=>{
+  const el=$("syncStatus");
+  let rev=parseInt(lsGet(REVKEY)||"0",10)||0,dirty=lsGet(DIRTYKEY)==="1",ver=0,timer=null,busy=false,reached=false,first=true,imgsChecked=false;
+  const status=(kind,text)=>{el.dataset.kind=kind;el.textContent=text};
+  async function call(path,opt={},ms=70000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+    try{return await fetch(API_BASE+path,{...opt,signal:c.signal,cache:"no-store",headers:opt.body?{"Content-Type":"application/json"}:{}})}finally{clearTimeout(t)}}
+  const markDirty=v=>{dirty=v;lsSet(DIRTYKEY,v?"1":"0")};
+  const setRev=r=>{rev=r;lsSet(REVKEY,String(r))};
+  function canAdopt(){if(spinning)return false;const a=document.activeElement;
+    return !(a&&a.closest&&a.closest("#setup,#extraPanel")&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
+  function adopt(state,r){S=migrate(state);setRev(r);markDirty(false);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}refreshAll();fetchImgs();}
+  function schedule(){ver++;markDirty(true);status("wait","保存待ち…");clearTimeout(timer);timer=setTimeout(push,700);}
+  async function push(){
+    clearTimeout(timer);
+    if(busy){timer=setTimeout(push,400);return}
+    busy=true;status("wait","保存中…");const sent=ver;
+    try{
+      const r=await call("/api/state",{method:"POST",body:JSON.stringify({rev,state:S})});
+      const j=await r.json().catch(()=>({}));
+      if(r.status===409){
+        if(j.state){adopt(j.state,j.rev);status("warn","他の端末の変更を読み込みました");setTimeout(()=>{if(!dirty)status("ok","共有中")},4000);}
+        else{setRev(j.rev||0);busy=false;await push();return}
+      }else if(r.ok){setRev(j.rev);reached=true;markDirty(ver!==sent);status(dirty?"wait":"ok",dirty?"保存待ち…":"共有中（保存済み）");if(dirty)timer=setTimeout(push,300);}
+      else throw new Error(r.status);
+    }catch(e){reached=false;status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
+    finally{busy=false}
+  }
+  async function pull(){
+    if(busy||document.hidden)return;
+    if(!reached)status("wait",first?"サーバーに接続中…（起動に最大1分）":"再接続中…");
+    busy=true;let next=null;
+    try{
+      const r=await call("/api/state");if(!r.ok)throw new Error(r.status);
+      const j=await r.json();reached=true;
+      if(j.state&&j.rev>rev){if(canAdopt()){const had=dirty;adopt(j.state,j.rev);if(had)status("warn","他の端末の変更を読み込みました");}}
+      else if(j.rev<rev){setRev(j.rev);next=push;}      // サーバー側のデータが消えていた → この端末の内容で作り直す
+      else if(dirty||!j.state)next=push;                 // 未送信の変更、または最初の1台
+      if(!dirty&&!next&&el.dataset.kind!=="warn")status("ok","共有中");
+    }catch(e){reached=false;status("off","サーバーに接続できません（この端末に保存中）");}
+    finally{busy=false;first=false}
+    if(next)await next();
+    if(reached&&!imgsChecked){imgsChecked=true;uploadLocalImgs();}
+  }
+  async function fetchImgs(){let got=false;
+    for(const p of S.prizes){if(p.img&&!getImg(p.id)){try{const r=await call("/api/img/"+p.id,{},30000);if(r.ok){const j=await r.json();try{localStorage.setItem(IMGKEY(p.id),j.data);got=true}catch(e){}}}catch(e){}}}
+    if(got&&!spinning)refreshAll();}
+  async function uploadLocalImgs(){ // この端末にだけある写真をサーバーへ
+    for(const p of S.prizes){const d=getImg(p.id);if(d&&!p.img){try{await putImg(p.id,d);p.img=true;save();}catch(e){}}}}
+  async function putImg(id,data){const r=await call("/api/img/"+id,{method:"PUT",body:JSON.stringify({data})});if(!r.ok)throw new Error(r.status)}
+  async function delImg(id){try{await call("/api/img/"+id,{method:"DELETE"})}catch(e){}}
+  syncHook=schedule;
+  return {pull,putImg,delImg,fetchImgs};
+})();
+
 /* ---------- boot ---------- */
 renderSetup();
 if(S.started)showMain();
+Sync.pull();
+setInterval(()=>Sync.pull(),4000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)Sync.pull()});
 </script>
 </body>
 </html>
