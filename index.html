@@ -62,7 +62,7 @@ input[type=number]{font-family:var(--num)}
 /* tier rail */
 .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
 .tier{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel);display:grid;gap:2px;min-width:0}
-.tier .t{font-family:var(--display);font-size:1.1rem}
+.tier .t{font-family:var(--display);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tier .p{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tier.now{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
 .tier.done{opacity:.55}
@@ -82,7 +82,35 @@ input[type=number]{font-family:var(--num)}
 @keyframes pop{from{transform:scale(.4)}to{transform:none}}
 .tier1{--c:var(--gold)}.tier2{--c:var(--silver)}.tier3{--c:var(--bronze)}.tier4{--c:var(--teal)}.tier5{--c:var(--t5)}.tier6{--c:var(--t6)}.tier7{--c:var(--t7)}.tier8{--c:var(--t8)}.tier9{--c:var(--t9)}.tier10{--c:var(--t10)}
 .rank[class*="tier"]{color:var(--c)}
-.tierBtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tierBtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:8px}
+textarea,select{font:500 1rem var(--body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+textarea{width:100%;box-sizing:border-box;resize:vertical;line-height:1.5}
+input,select{width:100%;box-sizing:border-box}
+select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.pbHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pbHead .dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.pbTools{margin-left:auto;display:flex;gap:6px}
+.pbGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.pbGrid .wide{grid-column:1/-1}
+.tierx{--c:var(--t6)}
+.presenter{color:var(--muted);letter-spacing:.15em;font-size:1rem;min-height:1.2em;margin-bottom:-10px}
+.ball .bn{display:block}
+.ball .bnm{display:block;font-family:var(--body);font-size:.32em;font-weight:700;line-height:1.3;margin-top:.15em}
+.ball .bnm:empty{display:none}
+.extraWrap{display:grid;gap:12px;justify-items:center;width:100%}
+.extraPanel{width:100%;max-width:720px;box-sizing:border-box;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px}
+#copyBox{width:100%;font-family:var(--num);font-size:.85rem}
+#countdown{position:fixed;inset:0;z-index:45;background:rgba(8,5,0,.97);display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding-inline:16px}
+.cdLabel{font-family:var(--display);font-size:clamp(1.6rem,6vw,3rem);color:#ffe08a;letter-spacing:.1em}
+.cdNum{font-family:var(--display);font-size:clamp(8rem,40vw,22rem);line-height:1;
+  background:linear-gradient(160deg,#fff4c2,#f2c14e 45%,#b8862b);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 40px rgba(255,200,80,.6));animation:cdPop .95s ease-out both}
+@keyframes cdPop{0%{transform:scale(2.2);opacity:0}25%{opacity:1;transform:scale(1)}100%{transform:scale(.85);opacity:.25}}
+.cdPres{color:#fff3c4;letter-spacing:.15em}
+.g-presenter{color:#fff3c4;letter-spacing:.2em;font-size:clamp(.95rem,2.6vw,1.3rem);min-height:1em}
+.g-num small{display:block;font-family:var(--body);font-size:.28em;font-weight:700;margin-top:.2em}
+.g-rank{white-space:nowrap}
 .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
 
 /* log */
@@ -90,7 +118,7 @@ input[type=number]{font-family:var(--num)}
 #log h2{margin:0;font-size:1.1rem}
 .logRow{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:grid;gap:6px}
 .logRow .h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
-.logRow .h b{font-family:var(--display);font-weight:400}
+.logRow .h b{font-family:var(--display);font-weight:400;font-size:1.1rem}
 .logRow .nums{font-family:var(--num);font-variant-numeric:tabular-nums;word-break:break-word;color:var(--fg)}
 .foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
 @media (max-width:560px){.rail{grid-template-columns:repeat(2,1fr)}.prizeRow{grid-template-columns:3.5rem 1fr 4.5rem}}
@@ -104,7 +132,7 @@ input[type=number]{font-family:var(--num)}
 .thumb{width:56px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 .fileBtn{position:relative;overflow:hidden}
 .fileBtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.prizeBlock{display:grid;gap:8px;padding-block:10px;border-bottom:1px solid var(--line)}
+.prizeBlock{display:grid;gap:10px;padding-block:14px;border-bottom:1px solid var(--line)}
 /* 1等 suspense on stage */
 #stage.suspense{animation:glow 1s ease-in-out infinite alternate}
 @keyframes glow{from{box-shadow:0 0 0 2px var(--gold),0 0 20px rgba(242,193,78,.2)}to{box-shadow:0 0 0 2px var(--gold),0 0 70px rgba(242,193,78,.65)}}
@@ -144,7 +172,7 @@ input[type=number]{font-family:var(--num)}
 @keyframes popBig{0%{transform:scale(.2) rotate(-8deg);opacity:0}100%{transform:none;opacity:1}}
 @keyframes fadeUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}
-  #stage.suspense,#grand .rays,#grand.go *,#grand.go::after{animation:none!important}}
+  #stage.suspense,#grand .rays,#grand.go *,#grand.go::after,.cdNum{animation:none!important}}
 </style>
 </head>
 <body>
@@ -171,15 +199,19 @@ input[type=number]{font-family:var(--num)}
         <input id="exclude" type="text" placeholder="なし">
       </label>
     </div>
-    <div style="display:grid;gap:8px">
-      <div class="prizeRow note"><span>等級</span><span>景品名（当選まで非表示）</span><span>当選人数</span></div>
+    <label for="roster">参加者名簿（任意）　1行に「番号 氏名」。入れると名簿の番号から抽選し、当選時に氏名も表示します
+      <textarea id="roster" rows="3" placeholder="001 山田 太郎&#10;002 佐藤 花子"></textarea>
+    </label>
+    <div style="display:grid;gap:4px">
+      <h2>賞と景品</h2>
+      <p class="note">上ほど格上の賞です。抽選は一番下の賞から始まり、一番上の賞で終わります。</p>
       <div id="prizeRows"></div>
       <div class="tierBtns">
-        <button class="btn small" id="addTier" type="button">＋ 等級を追加</button>
-        <button class="btn small" id="delTier" type="button">－ 一番下の等級を削除</button>
+        <button class="btn small" id="addTier" type="button">＋ 賞を追加</button>
+        <button class="btn small" id="presetBtn" type="button">推奨プランを読み込む</button>
         <span class="note" id="tierNote"></span>
       </div>
-      <p class="note">景品の写真は「写真を選ぶ」から登録できます（この端末に保存）。GitHubに prize1.jpg、prize2.jpg …（等級の数字）を置いても自動で表示されます。</p>
+      <p class="note">写真は「写真を選ぶ」で登録できます（この端末に保存）。GitHubに prize1.jpg、prize2.jpg …（上から何番目か）の名前で置いても表示されます。</p>
     </div>
     <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
     <div class="controls" style="justify-content:flex-start">
@@ -192,6 +224,7 @@ input[type=number]{font-family:var(--num)}
   </section>
 
   <section id="stage" hidden>
+    <div class="presenter" id="presenter"></div>
     <div class="rank" id="rank"></div>
     <div class="reveal" id="reveal"></div>
     <div class="prize" id="prize"></div>
@@ -199,26 +232,52 @@ input[type=number]{font-family:var(--num)}
     <div class="balls" id="balls"></div>
     <div class="controls">
       <button class="btn primary" id="drawBtn" type="button">ルーレット スタート</button>
-      <button class="btn" id="nextBtn" type="button" hidden>次の等級へ</button>
-      <button class="btn" id="replayBtn" type="button" hidden>1等の発表をもう一度</button>
+      <button class="btn" id="nextBtn" type="button" hidden>次へ</button>
+      <button class="btn" id="replayBtn" type="button" hidden>発表をもう一度</button>
+    </div>
+    <div class="extraWrap">
+      <button class="btn small" id="extraBtn" type="button">＋ 追加抽選（敗者復活など）</button>
+      <div id="extraPanel" class="extraPanel" hidden>
+        <b>追加抽選</b>
+        <div class="pbGrid">
+          <label for="exLabel">賞名<input id="exLabel" type="text" value="敗者復活賞"></label>
+          <label for="exCount">当選人数<input id="exCount" type="number" min="1" value="1" inputmode="numeric"></label>
+          <label for="exName" class="wide">景品名（任意）<input id="exName" type="text"></label>
+          <label for="exOnly" class="wide">対象の番号（クイズ正解者など。空欄なら、まだ当選していない全員）<input id="exOnly" type="text" placeholder="例：12,45,103"></label>
+          <label for="exPres">抽選者（任意）<input id="exPres" type="text" placeholder="例：COO"></label>
+          <label for="exFx">演出<select id="exFx"></select></label>
+        </div>
+        <p class="note" id="exMsg">今の抽選の次に差し込まれます。</p>
+        <div class="controls" style="justify-content:flex-start">
+          <button class="btn" id="exGo" type="button">この抽選を次に行う</button>
+          <button class="btn small" id="exCancel" type="button">閉じる</button>
+        </div>
+      </div>
     </div>
   </section>
 
   <section id="log" hidden>
     <div class="foot">
       <h2>当選番号一覧</h2>
-      <button class="btn small" id="resetBtn" type="button">最初からやり直す</button>
+      <div class="controls">
+        <button class="btn small" id="copyBtn" type="button" hidden>結果をコピー</button>
+        <button class="btn small" id="resetBtn" type="button">最初からやり直す</button>
+      </div>
     </div>
     <div id="logRows"></div>
+    <textarea id="copyBox" rows="6" readonly hidden aria-label="コピー用の結果"></textarea>
   </section>
 </div>
 
-<div id="grand" hidden role="dialog" aria-modal="true" aria-label="1等 当選発表">
+<div id="countdown" hidden aria-live="assertive"></div>
+
+<div id="grand" hidden role="dialog" aria-modal="true" aria-label="当選発表">
   <div class="rays"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
   <div class="grandInner">
     <div class="g-eyebrow">EPDW 創業記念 抽選会</div>
-    <div class="g-rank">1等</div>
+    <div class="g-presenter" id="gPres"></div>
+    <div class="g-rank" id="gRank"></div>
     <div class="g-title">大当たり</div>
     <div class="g-nums" id="gNums"></div>
     <div id="gImg"></div>
@@ -228,181 +287,268 @@ input[type=number]{font-family:var(--num)}
 </div>
 
 <script>
-const DEFAULT_PRIZES=[
-  {rank:1,name:"1等の景品名",count:2},
-  {rank:2,name:"2等の景品名",count:5},
-  {rank:3,name:"3等の景品名",count:15},
-  {rank:4,name:"4等の景品名",count:20},
-];
 const KEY="lottery-roulette-v1";
 const MAX_TIERS=10;
-function orderOf(prizes){return prizes.map(p=>p.rank).sort((a,b)=>b-a)}
-let S={prizes:JSON.parse(JSON.stringify(DEFAULT_PRIZES)),max:80,exclude:"",started:false,results:{},order:orderOf(DEFAULT_PRIZES),idx:0};
-try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes)S=v;}catch(e){}
+const FX={grand:"豪華",mid:"やや豪華",normal:"通常"};
+const PRESET_LABEL="推奨プランを読み込む";
+const PRESET=[
+  {label:"創業記念特賞",name:"旅行券 5万円",count:1,fx:"grand"},
+  {label:"未来創造賞",name:"高級家電",count:2,fx:"grand"},
+  {label:"感謝賞",name:"高級レストラン食事券",count:5,fx:"mid"},
+  {label:"チャレンジ賞",name:"Amazonギフト券 5,000円",count:20,fx:"normal"},
+  {label:"EPDW賞",name:"スターバックスカード 3,000円",count:30,fx:"normal"}];
+const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function defaults(){return [
+  {id:"t1",label:"1等",name:"1等の景品名",count:2,presenter:"",fx:"grand"},
+  {id:"t2",label:"2等",name:"2等の景品名",count:5,presenter:"",fx:"mid"},
+  {id:"t3",label:"3等",name:"3等の景品名",count:15,presenter:"",fx:"normal"},
+  {id:"t4",label:"4等",name:"4等の景品名",count:20,presenter:"",fx:"normal"}]}
+let S={prizes:defaults(),extras:[],roster:"",max:80,exclude:"",started:false,results:{},order:[],idx:0};
+function drawOrder(){return S.prizes.map(p=>p.id).reverse()}
+S.order=drawOrder();
+function migrate(v){
+  if(v.prizes.length&&v.prizes[0].id===undefined){ // 旧形式（1等〜N等）から移行
+    const ps=v.prizes.slice().sort((a,b)=>a.rank-b.rank);
+    ps.forEach(p=>{try{const d=localStorage.getItem("lottery-img-"+p.rank);if(d&&!localStorage.getItem("lottery-img-t"+p.rank))localStorage.setItem("lottery-img-t"+p.rank,d)}catch(e){}});
+    const res={};Object.keys(v.results||{}).forEach(r=>{res["t"+r]=v.results[r]});
+    v={prizes:ps.map(p=>({id:"t"+p.rank,label:p.rank+"等",name:p.name,count:p.count,presenter:"",fx:p.rank===1?"grand":p.rank===2?"mid":"normal"})),
+       extras:[],roster:"",max:v.max||80,exclude:v.exclude||"",started:!!v.started,results:res,order:(v.order||[]).map(r=>"t"+r),idx:v.idx||0};
+    if(!v.order.length)v.order=v.prizes.map(p=>p.id).reverse();
+  }
+  v.extras=v.extras||[];v.roster=v.roster||"";v.results=v.results||{};
+  return v;
+}
+try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes&&v.prizes.length)S=migrate(v);}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const $=id=>document.getElementById(id);
-const IMGKEY=r=>"lottery-img-"+r;
-function getImg(r){try{return localStorage.getItem(IMGKEY(r))||""}catch(e){return ""}}
-function setImg(r,d){try{d?localStorage.setItem(IMGKEY(r),d):localStorage.removeItem(IMGKEY(r));return true}catch(e){return false}}
-function imgSrc(r){return getImg(r)||`prize${r}.jpg`}
+const IMGKEY=id=>"lottery-img-"+id;
+function getImg(id){try{return localStorage.getItem(IMGKEY(id))||""}catch(e){return ""}}
+function setImg(id,d){try{d?localStorage.setItem(IMGKEY(id),d):localStorage.removeItem(IMGKEY(id));return true}catch(e){return false}}
+function imgSrc(id){const d=getImg(id);if(d)return d;const i=posOf(id);return i<0?"":`prize${i+1}.jpg`}
 function resizeFile(file){return new Promise((ok,ng)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
   const m=1000,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
   c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.82))};im.onerror=ng;im.src=fr.result};fr.onerror=ng;fr.readAsDataURL(file)})}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function parseNums(t){return new Set(String(t).split(/[,、，\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
+function parseRoster(t){const m=new Map();String(t||"").split(/\r?\n/).forEach(l=>{const x=l.match(/^\s*(\d+)[\s,、，:：\t]*(.*)$/);if(x)m.set(parseInt(x[1],10),x[2].trim())});return m}
+let ROSTER=parseRoster(S.roster);
+const nameOf=n=>ROSTER.get(n)||"";
+function basePool(){if(ROSTER.size)return [...ROSTER.keys()].sort((a,b)=>a-b);const a=[];for(let i=1;i<=S.max;i++)a.push(i);return a}
+function digits(){return String(ROSTER.size?Math.max(...ROSTER.keys()):S.max).length}
+const fmt=n=>String(n).padStart(digits(),"0");
+function pool(p){const ex=parseNums(S.exclude),won=new Set(Object.values(S.results).flat());
+  let a=basePool().filter(i=>!ex.has(i)&&!won.has(i));
+  if(p&&p.only&&p.only.length){const s=new Set(p.only);a=a.filter(i=>s.has(i))}
+  return a}
+function prizeOf(id){return S.prizes.find(p=>p.id===id)||S.extras.find(p=>p.id===id)}
+function posOf(id){return S.prizes.findIndex(p=>p.id===id)}
+function tierCls(id){const i=posOf(id);return i<0?"tierx":"tier"+Math.min(10,i+1)}
+const anyDrawn=()=>Object.keys(S.results).length>0;
+const fxOptions=sel=>Object.entries(FX).map(([k,v])=>`<option value="${k}" ${sel===k?"selected":""}>${v}</option>`).join("");
 
 /* ---------- setup ---------- */
 function renderSetup(){
-  $("maxNum").value=S.max;$("exclude").value=S.exclude;
-  $("prizeRows").innerHTML=S.prizes.map(p=>{const im=getImg(p.rank);return `
-    <div class="prizeBlock">
-      <div class="prizeRow">
-        <b class="rank tier${p.rank}" style="font-size:1.2rem">${p.rank}等</b>
-        <input id="pn${p.rank}" type="text" value="${esc(p.name)}" aria-label="${p.rank}等の景品名">
-        <input id="pc${p.rank}" type="number" min="1" value="${p.count}" inputmode="numeric" aria-label="${p.rank}等の人数">
+  $("maxNum").value=S.max;$("exclude").value=S.exclude;$("roster").value=S.roster;
+  const locked=anyDrawn(),n=S.prizes.length;
+  $("prizeRows").innerHTML=S.prizes.map((p,i)=>{const im=getImg(p.id),done=!!S.results[p.id];return `
+    <div class="prizeBlock ${tierCls(p.id)}">
+      <div class="pbHead"><span class="dot"></span><span class="note">上から${i+1}番目${done?"・抽選済み":""}</span>
+        <span class="pbTools">
+          <button class="btn small" type="button" data-up="${p.id}" ${locked||i===0?"disabled":""} aria-label="上へ移動">↑</button>
+          <button class="btn small" type="button" data-down="${p.id}" ${locked||i===n-1?"disabled":""} aria-label="下へ移動">↓</button>
+          <button class="btn small" type="button" data-rm="${p.id}" ${locked||n<=1?"disabled":""}>削除</button>
+        </span></div>
+      <div class="pbGrid">
+        <label for="pl_${p.id}">賞名<input id="pl_${p.id}" type="text" value="${esc(p.label)}"></label>
+        <label for="pc_${p.id}">当選人数<input id="pc_${p.id}" type="number" min="1" inputmode="numeric" value="${p.count}"></label>
+        <label for="pn_${p.id}" class="wide">景品名（当選まで非表示）<input id="pn_${p.id}" type="text" value="${esc(p.name)}"></label>
+        <label for="pp_${p.id}">抽選者（任意）<input id="pp_${p.id}" type="text" placeholder="例：代表取締役社長" value="${esc(p.presenter||"")}"></label>
+        <label for="pfx_${p.id}">演出（豪華＝カウントダウン＋全画面発表）<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
       </div>
       <div class="imgCell">
         ${im?`<img class="thumb" src="${im}" alt="">`:`<span class="note">写真なし</span>`}
-        <label class="btn small fileBtn" for="pf${p.rank}">写真を選ぶ<input id="pf${p.rank}" type="file" accept="image/*" data-r="${p.rank}"></label>
-        ${im?`<button class="btn small" type="button" data-del="${p.rank}">写真を外す</button>`:""}
+        <label class="btn small fileBtn" for="pimg_${p.id}">写真を選ぶ<input id="pimg_${p.id}" type="file" accept="image/*" data-id="${p.id}"></label>
+        ${im?`<button class="btn small" type="button" data-del="${p.id}">写真を外す</button>`:""}
       </div>
     </div>`}).join("");
-  $("prizeRows").querySelectorAll("input[type=file]").forEach(inp=>inp.onchange=async()=>{
-    const f=inp.files[0];if(!f)return;keepNames();
-    try{const d=await resizeFile(f);if(!setImg(+inp.dataset.r,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
-    catch(e){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
-    renderSetup();});
-  $("prizeRows").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{keepNames();setImg(+b.dataset.del,"");renderSetup();});
-  const locked=Object.keys(S.results).length>0;
-  $("addTier").disabled=locked||S.prizes.length>=MAX_TIERS;
-  $("delTier").disabled=locked||S.prizes.length<=1;
-  $("tierNote").textContent=locked?"抽選を始めた後は等級の増減はできません（やり直すと変更できます）":`現在 ${S.prizes.length}等級（最大${MAX_TIERS}）`;
+  $("addTier").disabled=locked||n>=MAX_TIERS;$("presetBtn").disabled=locked;
+  $("tierNote").textContent=locked?"抽選を始めた後は賞の追加・削除・並べ替えはできません。途中で増やすときは抽選画面の「追加抽選」を使ってください":`現在 ${n}賞（最大${MAX_TIERS}）`;
 }
-$("addTier").onclick=()=>{if(Object.keys(S.results).length||S.prizes.length>=MAX_TIERS)return;keepNames();
-  const r=S.prizes.length+1;S.prizes.push({rank:r,name:`${r}等の景品名`,count:10});S.order=orderOf(S.prizes);S.idx=0;save();renderSetup();
-  const n=$("pn"+r);if(n){n.focus();n.select();}};
-$("delTier").onclick=()=>{if(Object.keys(S.results).length||S.prizes.length<=1)return;keepNames();
-  S.prizes.pop();S.order=orderOf(S.prizes);S.idx=0;save();renderSetup();};
-function keepNames(){S.prizes.forEach(p=>{const n=$("pn"+p.rank),c=$("pc"+p.rank);if(n)p.name=n.value;if(c)p.count=parseInt(c.value,10)||p.count;});S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();}
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
-function parseExclude(t){return new Set(String(t).split(/[,、\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
-function pool(){
-  const ex=parseExclude(S.exclude),won=new Set(Object.values(S.results).flat());
-  const a=[];for(let i=1;i<=S.max;i++)if(!ex.has(i)&&!won.has(i))a.push(i);return a;
+function readForm(){
+  S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
+    p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
+    p.presenter=g("pp").value.trim();p.fx=g("pfx").value;});
+  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;S.roster=$("roster").value;ROSTER=parseRoster(S.roster);save();
 }
-$("startBtn").onclick=()=>{
-  const max=parseInt($("maxNum").value,10);
-  S.prizes.forEach(p=>{p.name=$("pn"+p.rank).value.trim()||`${p.rank}等`;p.count=Math.max(1,parseInt($("pc"+p.rank).value,10)||1);});
-  S.exclude=$("exclude").value;
-  if(!(max>=1)){msg("最大番号を1以上で入れてください。");return;}
-  S.max=max;
-  const total=S.prizes.filter(p=>!S.results[p.rank]).reduce((a,p)=>a+p.count,0);
-  const avail=pool().length;
-  if(total>avail){msg(`当選人数の合計（${total}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
-  if(!Object.keys(S.results).length){S.order=orderOf(S.prizes);S.idx=0;}
+$("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
+  const d=b.dataset,id=d.up||d.down||d.rm||d.del,i=posOf(id);
+  if(d.up&&i>0)[S.prizes[i-1],S.prizes[i]]=[S.prizes[i],S.prizes[i-1]];
+  else if(d.down&&i<S.prizes.length-1)[S.prizes[i+1],S.prizes[i]]=[S.prizes[i],S.prizes[i+1]];
+  else if(d.rm&&!anyDrawn())S.prizes.splice(i,1);
+  else if(d.del)setImg(id,"");
+  if(!anyDrawn()){S.order=drawOrder();S.idx=0}
+  save();renderSetup();});
+$("prizeRows").addEventListener("change",async e=>{const inp=e.target;if(inp.type!=="file")return;const f=inp.files[0];if(!f)return;readForm();
+  try{const d=await resizeFile(f);if(!setImg(inp.dataset.id,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
+  catch(err){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
+  renderSetup();});
+$("addTier").onclick=()=>{if(anyDrawn()||S.prizes.length>=MAX_TIERS)return;readForm();
+  const id=uid();S.prizes.push({id,label:`${S.prizes.length+1}等`,name:"",count:10,presenter:"",fx:"normal"});
+  S.order=drawOrder();S.idx=0;save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
+let presetArmed=null;
+$("presetBtn").onclick=()=>{if(anyDrawn())return;const b=$("presetBtn");
+  if(!presetArmed){b.textContent="もう一度押すと今の賞の設定を置き換えます";b.classList.add("danger");
+    presetArmed=setTimeout(()=>{presetArmed=null;b.textContent=PRESET_LABEL;b.classList.remove("danger")},4000);return}
+  clearTimeout(presetArmed);presetArmed=null;b.textContent=PRESET_LABEL;b.classList.remove("danger");
+  readForm();S.prizes=PRESET.map(p=>({...p,id:uid(),presenter:""}));S.order=drawOrder();S.idx=0;save();renderSetup();
+  $("setupMsg").textContent=`推奨プラン（${S.prizes.length}賞・計${S.prizes.reduce((a,p)=>a+p.count,0)}名）を読み込みました。抽選者や景品名は自由に書き換えられます。`;};
+$("startBtn").onclick=()=>{readForm();
+  if(!ROSTER.size&&!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
+  const need=[...S.prizes,...S.extras].filter(p=>!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
+  if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か${ROSTER.size?"名簿":"最大番号"}を見直してください。`);return;}
+  if(!anyDrawn()){S.order=drawOrder();S.idx=0;}
   S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
 };
-function msg(t){$("setupMsg").innerHTML=`<span class="err">${t}</span>`}
+function msg(t){$("setupMsg").innerHTML=`<span class="err">${esc(t)}</span>`}
 
 /* ---------- main ---------- */
-function prizeOf(r){return S.prizes.find(p=>p.rank===r)}
 function showMain(){
   $("setup").hidden=true;$("main").hidden=false;$("stage").hidden=false;$("log").hidden=false;
   renderRail();renderLog();prepareStage();
 }
 function renderRail(){
   const cur=S.order[S.idx];
-  $("rail").innerHTML=S.order.map(r=>{const p=prizeOf(r);
-    return `<div class="tier ${r===cur?"now":""} ${S.results[r]?"done":""}"><span class="t rank tier${r}" style="font-size:1.1rem">${r}等</span><span class="p">${S.results[r]?esc(p.name):"？？？"}・${p.count}名</span></div>`}).join("");
+  $("rail").innerHTML=S.order.map(id=>{const p=prizeOf(id);if(!p)return "";const done=!!S.results[id];
+    return `<div class="tier ${id===cur?"now":""} ${done?"done":""}"><span class="t rank ${tierCls(id)}">${esc(p.label)}</span><span class="p">${done?esc(p.name||"—"):"？？？"}・${p.count}名</span></div>`}).join("");
 }
+const lastGrand=()=>S.order.filter(id=>S.results[id]&&prizeOf(id)&&prizeOf(id).fx==="grand").at(-1);
+function setReplay(id){const b=$("replayBtn");b.hidden=!id;if(id){b.dataset.id=id;b.textContent=`${prizeOf(id).label}の発表をもう一度`}}
 function prepareStage(){
-  const r=S.order[S.idx];
-  if(r===undefined){ // finished
+  const id=S.order[S.idx];
+  $("extraPanel").hidden=true;
+  if(id===undefined){ // finished
+    $("presenter").textContent="";
     $("rank").className="rank tier1";$("rank").textContent="抽選終了";
     $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
-    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;$("replayBtn").hidden=!S.results[1];return;
+    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());return;
   }
-  const p=prizeOf(r);
-  $("rank").className="rank tier"+r;$("rank").textContent=r+"等";
+  const p=prizeOf(id);
+  $("presenter").textContent=p.presenter?`抽選者　${p.presenter}`:"";
+  $("rank").className="rank "+tierCls(id);$("rank").textContent=p.label;
   $("prize").className="prize";$("prize").textContent="";
   $("reveal").innerHTML=`<div class="mystery" aria-label="景品は当選発表で公開">？</div>`;
-  $("sub").textContent=`${p.count}名を一度に抽選します（残り対象 ${pool().length}名）`;
-  const size=p.count<=2?"clamp(3rem,14vw,6rem)":p.count<=5?"clamp(2.2rem,9vw,4rem)":p.count<=15?"clamp(1.4rem,5vw,2.4rem)":"clamp(1.2rem,4vw,2rem)";
+  $("sub").textContent=`${p.count}名を一度に抽選します（対象 ${pool(p).length}名${p.only&&p.only.length?"・指定の番号のみ":""}）`;
+  const c=p.count,size=c<=2?"clamp(3rem,14vw,6rem)":c<=5?"clamp(2.2rem,9vw,4rem)":c<=15?"clamp(1.4rem,5vw,2.4rem)":c<=30?"clamp(1.2rem,4vw,2rem)":"clamp(1rem,3.2vw,1.6rem)";
   $("balls").style.setProperty("--bs",size);
-  $("balls").innerHTML=Array.from({length:p.count},()=>`<div class="ball">${"-".repeat(String(S.max).length)}</div>`).join("");
-  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;$("replayBtn").hidden=true;
-  if(S.results[r]){showWinners(r,false);}
+  $("balls").innerHTML=Array.from({length:c},()=>`<div class="ball"><span class="bn">${"-".repeat(digits())}</span><span class="bnm"></span></div>`).join("");
+  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;setReplay(null);
+  if(S.results[id])showWinners(id,false);
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 
 let spinning=false;
 $("drawBtn").onclick=()=>{
-  if(spinning)return;const r=S.order[S.idx];const p=prizeOf(r);
-  const cand=pool();if(cand.length<p.count){$("sub").textContent="抽選対象が足りません。";return;}
+  if(spinning)return;const id=S.order[S.idx],p=prizeOf(id);
+  const cand=pool(p);if(cand.length<p.count){$("sub").textContent=`抽選対象が足りません（対象 ${cand.length}名）。`;return;}
+  spinning=true;$("drawBtn").disabled=true;$("extraBtn").disabled=true;$("extraPanel").hidden=true;
+  if(p.fx==="grand")countdown(p,()=>spin(id,p,cand));else spin(id,p,cand);
+};
+function countdown(p,done){
+  const el=$("countdown");let n=3;el.hidden=false;
+  const tick=()=>{if(n===0){el.hidden=true;el.innerHTML="";done();return}
+    el.innerHTML=`<div class="cdLabel">${esc(p.label)}</div><span class="cdNum">${n}</span>${p.presenter?`<div class="cdPres">抽選者　${esc(p.presenter)}</div>`:""}`;
+    Music.count(n);n--;setTimeout(tick,1000)};
+  tick();
+}
+function spin(id,p,cand){
   const winners=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);
-  spinning=true;$("drawBtn").disabled=true;
-  const balls=[...$("balls").children];const pad=String(S.max).length;
-  const dur=r===1?16000:r===2?8000:4500; const t0=performance.now();
-  // 1等(2名): 1人目は中盤で確定、2人目は最後まで引っぱる
-  const stopAt=(r===1&&balls.length===2)?[dur*0.5,dur]:balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
-  Music.start(r,dur/1000);
-  if(r===1){$("stage").classList.add("suspense");$("sub").textContent="運命の1等、抽選中…";}
+  const balls=[...$("balls").children],cls=tierCls(id),grand=p.fx==="grand";
+  const dur=grand?16000:p.fx==="mid"?8000:(p.count>30?6000:4500),t0=performance.now();
+  // 豪華演出で2名のとき: 1人目は中盤で確定、2人目は最後まで引っぱる
+  const stopAt=(grand&&balls.length===2)?[dur*0.5,dur]:balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
+  Music.start(p.fx,dur/1000);
+  if(grand){$("stage").classList.add("suspense");$("sub").textContent=`運命の${p.label}、抽選中…`;}
+  else $("sub").textContent=`${p.label} 抽選中…`;
   let last=0,stopped=0;
   function frame(t){
-    const el=t-t0;
-    let interval;
-    if(r===1){ // 止まる直前ほどゆっくり
-      const next=stopAt.find(x=>x>el)??dur, prev=stopAt.filter(x=>x<=el).pop()||0;
-      const k=Math.min(1,(el-prev)/Math.max(1,next-prev));
-      interval=50+Math.pow(k,3)*480;
-    }else interval=60+Math.min(el/dur,1)*120;
+    const el=t-t0;let interval;
+    if(grand){const next=stopAt.find(x=>x>el)??dur,prev=stopAt.filter(x=>x<=el).pop()||0;
+      const k=Math.min(1,(el-prev)/Math.max(1,next-prev));interval=50+Math.pow(k,3)*480;}
+    else interval=60+Math.min(el/dur,1)*120;
     if(t-last>interval){last=t;
-      balls.forEach((b,i)=>{if(el<stopAt[i]){b.textContent=String(cand[Math.floor(Math.random()*cand.length)]).padStart(pad,"0");}});
-    }
-    balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){b.textContent=String(winners[i]).padStart(pad,"0");b.classList.add("win","tier"+r);stopped++;Music.ding(r);
-      if(r===1&&stopped<balls.length)$("sub").textContent=`残り${balls.length-stopped}名…！`;}});
+      balls.forEach((b,i)=>{if(el<stopAt[i])b.firstChild.textContent=fmt(cand[Math.floor(Math.random()*cand.length)]);});}
+    balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){
+      b.firstChild.textContent=fmt(winners[i]);b.lastChild.textContent=nameOf(winners[i]);b.classList.add("win",cls);stopped++;Music.ding(p.fx);
+      if(grand&&stopped<balls.length)$("sub").textContent=`残り${balls.length-stopped}名…！`;}});
     if(el<dur)requestAnimationFrame(frame);else finish();
   }
   function finish(){
-    Music.stop();Music.fanfare(r);
-    S.results[r]=winners;save();
-    if(r===1){
-      $("sub").textContent="1等 決定！";
-      setTimeout(()=>{$("stage").classList.remove("suspense");spinning=false;showWinners(r,true);renderRail();renderLog();Grand.show(r,winners);},1650);
-    }else{spinning=false;showWinners(r,true);renderRail();renderLog();}
+    Music.stop();Music.fanfare(p.fx);
+    S.results[id]=winners;save();
+    const after=()=>{$("stage").classList.remove("suspense");spinning=false;$("extraBtn").disabled=false;showWinners(id,true);renderRail();renderLog();};
+    if(grand){$("sub").textContent=`${p.label} 決定！`;setTimeout(()=>{after();Grand.show(id,winners);},1650);}
+    else after();
   }
   requestAnimationFrame(frame);
-};
-$("replayBtn").onclick=()=>{if(S.results[1]){Music.fanfare(1);setTimeout(()=>Grand.show(1,S.results[1]),1650);}};
-function showWinners(r,anim){
-  const pad=String(S.max).length;const balls=[...$("balls").children];
-  S.results[r].forEach((n,i)=>{if(balls[i]){balls[i].textContent=String(n).padStart(pad,"0");balls[i].classList.add("win","tier"+r);if(!anim)balls[i].style.animation="none";}});
-  const p=prizeOf(r);
-  $("prize").textContent=p.name;$("prize").classList.add("show");
-  const src=imgSrc(r);
-  $("reveal").innerHTML=`<img class="prizeImg tier${r}" alt="${esc(p.name)}">`;
-  const im=$("reveal").querySelector("img");
-  im.onerror=()=>{$("reveal").innerHTML=""};im.src=src;
-  if(!anim)im.style.animation="none";
+}
+$("replayBtn").onclick=()=>{const id=$("replayBtn").dataset.id;if(id&&S.results[id]){Music.fanfare("grand");setTimeout(()=>Grand.show(id,S.results[id]),1650);}};
+function showWinners(id,anim){
+  const p=prizeOf(id),cls=tierCls(id),balls=[...$("balls").children];
+  S.results[id].forEach((n,i)=>{const b=balls[i];if(!b)return;b.firstChild.textContent=fmt(n);b.lastChild.textContent=nameOf(n);b.classList.add("win",cls);if(!anim)b.style.animation="none";});
+  $("prize").textContent=p.name;$("prize").classList.toggle("show",!!p.name);
+  const src=imgSrc(id);
+  if(src){$("reveal").innerHTML=`<img class="prizeImg ${cls}" alt="${esc(p.name)}">`;const im=$("reveal").querySelector("img");
+    im.onerror=()=>{$("reveal").innerHTML=""};im.src=src;if(!anim)im.style.animation="none";}
+  else $("reveal").innerHTML="";
   if(anim)Sparkle.burst();
   $("sub").textContent=`当選おめでとうございます！ 番号札をお持ちの方は前へどうぞ`;
-  $("drawBtn").hidden=true;$("nextBtn").hidden=false;$("replayBtn").hidden=r!==1;
-  $("nextBtn").textContent=S.idx<S.order.length-1?`次へ（${S.order[S.idx+1]}等）`:"抽選を終える";
+  $("drawBtn").hidden=true;$("nextBtn").hidden=false;setReplay(p.fx==="grand"?id:null);
+  const nx=prizeOf(S.order[S.idx+1]);
+  $("nextBtn").textContent=nx?`次へ（${nx.label}）`:"抽選を終える";
 }
 $("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();};
+
+/* ---------- 追加抽選（敗者復活など） ---------- */
+$("exFx").innerHTML=fxOptions("mid");
+$("extraBtn").onclick=()=>{if(spinning)return;const pn=$("extraPanel");pn.hidden=!pn.hidden;
+  if(!pn.hidden){$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切りで入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
+$("exCancel").onclick=()=>{$("extraPanel").hidden=true};
+$("exGo").onclick=()=>{if(spinning)return;
+  const count=Math.max(1,parseInt($("exCount").value,10)||1),only=[...parseNums($("exOnly").value)];
+  const p={id:uid(),label:$("exLabel").value.trim()||"追加抽選",name:$("exName").value.trim(),count,presenter:$("exPres").value.trim(),fx:$("exFx").value,only};
+  const avail=pool(p).length;
+  if(avail<count){$("exMsg").innerHTML=`<span class="err">対象が${avail}名しかいません（当選済み・欠席の番号は除かれます）。人数か対象の番号を見直してください。</span>`;return;}
+  S.extras.push(p);const cur=S.order[S.idx];
+  if(cur===undefined||!S.results[cur])S.order.splice(S.idx,0,p.id);else{S.order.splice(S.idx+1,0,p.id);S.idx++;}
+  save();renderRail();renderLog();prepareStage();
+  $("exOnly").value="";$("stage").scrollIntoView({behavior:"smooth",block:"start"});
+};
+
+/* ---------- log ---------- */
 function renderLog(){
-  const rows=S.order.filter(r=>S.results[r]).map(r=>{const p=prizeOf(r);
-    return `<div class="logRow"><div class="h"><b class="rank tier${r}" style="font-size:1.1rem">${r}等</b><span>${esc(p.name)}</span><span class="note">${S.results[r].length}名</span></div><div class="nums">${S.results[r].join("、")}</div></div>`});
-  $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。${S.order[0]}等から順に抽選します。</p>`;
+  const rows=S.order.filter(id=>S.results[id]).map(id=>{const p=prizeOf(id);
+    return `<div class="logRow"><div class="h"><b class="rank ${tierCls(id)}">${esc(p.label)}</b><span>${esc(p.name||"")}</span><span class="note">${S.results[id].length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</span></div><div class="nums">${S.results[id].map(n=>esc(fmt(n)+(nameOf(n)?" "+nameOf(n):""))).join("、")}</div></div>`});
+  const first=prizeOf(S.order[0]);
+  $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。${first?esc(first.label):""}から順に抽選します。</p>`;
+  $("copyBtn").hidden=!rows.length;$("copyBox").hidden=true;
 }
+$("copyBtn").onclick=async()=>{
+  const lines=["賞名\t景品\t番号\t氏名"];
+  S.order.filter(id=>S.results[id]).forEach(id=>{const p=prizeOf(id);S.results[id].forEach(n=>lines.push([p.label,p.name||"",fmt(n),nameOf(n)].join("\t")))});
+  const t=lines.join("\n"),b=$("copyBtn"),box=$("copyBox");
+  try{await navigator.clipboard.writeText(t);box.hidden=true;b.textContent="コピーしました";setTimeout(()=>{b.textContent="結果をコピー"},2000);}
+  catch(e){box.hidden=false;box.value=t;box.focus();box.select();b.textContent="下の枠を長押ししてコピーしてください";}
+};
+
 $("setupBtn").onclick=()=>{ if(spinning)return;
-  const anyDrawn=Object.keys(S.results).length>0;
-  const opening=$("setup").hidden;
+  const drawn=anyDrawn(),opening=$("setup").hidden;
   if(!opening&&!S.started)return; // 開始前は設定画面を閉じない
   $("setup").hidden=!opening;
   $("setupBtn").textContent=opening&&S.started?"設定を閉じる":"設定";
   if(opening){
     renderSetup();
-    $("startBtn").textContent=anyDrawn?"設定を保存して戻る":"この設定で開始";
-    $("setupMsg").textContent=anyDrawn?"抽選済みの結果はそのまま残ります。景品名の修正や、遅れて来た方の分の最大番号の変更ができます。":"受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。";
+    $("startBtn").textContent=drawn?"設定を保存して戻る":"この設定で開始";
+    $("setupMsg").textContent=drawn?"抽選済みの結果はそのまま残ります。景品名・人数・抽選者・演出の修正や、最大番号の変更ができます。":"受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。";
     $("setup").scrollIntoView({behavior:"smooth",block:"start"});
   }
 };
@@ -417,9 +563,9 @@ $("resetBtn").onclick=()=>{
   }
   clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
   Music.stop();Grand.hide();$("stage").classList.remove("suspense");
-  S.results={};S.idx=0;S.started=false;save();
+  S.results={};S.extras=[];S.order=drawOrder();S.idx=0;S.started=false;save();
   $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
-  $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";
+  $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";$("setupBtn").textContent="設定";
   $("setupMsg").textContent="結果を消しました。設定を確認して開始してください。";
   renderSetup();window.scrollTo({top:0,behavior:"smooth"});
 };
@@ -446,17 +592,17 @@ const Music=(()=>{
     o.connect(lp);lp.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.3)}))}
   function newBus(){const c=ac();bus=c.createGain();bus.gain.value=1;bus.connect(master);return bus}
 
-  // 3等・4等・2等: 軽快なゲームショー風ループ
+  // 通常・やや豪華: 軽快なゲームショー風ループ
   const bass=[110,110,147,147,131,131,165,165], arp=[440,554,659,880,659,554,494,587,740,587,523,659,784,659,587,494];
-  function startLoop(r){const c=ac(),b=newBus();const step=60/(r===2?132:150)/2;let n=0,next=c.currentTime+.05;
+  function startLoop(mid){const c=ac(),b=newBus();const step=60/(mid?132:150)/2;let n=0,next=c.currentTime+.05;
     loop=setInterval(()=>{while(next<c.currentTime+.2){
       if(n%2===0)note(bass[(n/2|0)%8],next,step*1.8,"triangle",.3,b);
       note(arp[n%16],next,step*.8,"square",.06,b);
       noise(next,.04,n%4===2?.15:.06,5000,"highpass",b);
-      if(r===2&&n%8===0)timp(110,next,.35,b);
+      if(mid&&n%8===0)timp(110,next,.35,b);
       n++;next+=step;}},50);}
 
-  // 1等: ドラムロール＋ティンパニ＋盛り上がる弦（だんだん大きく、速く）
+  // 豪華: ドラムロール＋ティンパニ＋盛り上がる弦（だんだん大きく、速く）
   function grandRoll(sec){const c=ac(),b=newBus(),t0=c.currentTime+.05;
     b.gain.setValueAtTime(.5,t0);b.gain.linearRampToValueAtTime(1.15,t0+sec);
     for(let t=0;t<sec;t+=.055)noise(t0+t,.05,.04+.08*(t/sec),1800,"highpass",b);
@@ -480,14 +626,15 @@ const Music=(()=>{
     [1318.5,1760,2217.5,2637,3520].forEach((f,i)=>note(f,t+4.2+i*.06,1.2,"sine",.06));
   }
   return{
-    start(r,sec){if(!on)return;try{r===1?grandRoll(sec):startLoop(r)}catch(e){}},
+    start(fx,sec){if(!on)return;try{fx==="grand"?grandRoll(sec):startLoop(fx==="mid")}catch(e){}},
+    count(n){if(!on)return;try{const t=ac().currentTime;timp(n===1?110:82.4,t,.9);noise(t,.6,.12,2500,"highpass");if(n===1)crash(t+.02,.2,1.2);}catch(e){}},
     stop(){clearInterval(loop);loop=null;if(bus&&ctx){const b=bus,n=ctx.currentTime;b.gain.cancelScheduledValues(n);b.gain.setValueAtTime(b.gain.value,n);b.gain.linearRampToValueAtTime(0,n+.12);setTimeout(()=>{try{b.disconnect()}catch(e){}},400);}bus=null},
-    ding(r){if(!on)return;try{const t=ac().currentTime;
-      if(r===1){timp(55,t,1);crash(t,.35,2.5);brass([220,277.2,329.6,440],t,.6,.05);}
+    ding(fx){if(!on)return;try{const t=ac().currentTime;
+      if(fx==="grand"){timp(55,t,1);crash(t,.35,2.5);brass([220,277.2,329.6,440],t,.6,.05);}
       else{note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}}catch(e){}},
-    fanfare(r){if(!on)return;try{if(r===1){grandFanfare();return}const t=ac().currentTime+.05;
-      const seq=r===2?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
-      seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(r===2)crash(t+.5,.2,1.5);}catch(e){}},
+    fanfare(fx){if(!on)return;try{if(fx==="grand"){grandFanfare();return}const t=ac().currentTime+.05;
+      const seq=fx==="mid"?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
+      seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(fx==="mid")crash(t+.5,.2,1.5);}catch(e){}},
     toggle(){on=!on;if(!on)this.stop();return on},
     unlock(){try{ac()}catch(e){}}
   };
@@ -509,7 +656,7 @@ const Sparkle=(()=>{
   return{burst(){extra=60}};
 })();
 
-/* ---------- 1等 grand reveal ---------- */
+/* ---------- 豪華演出の全画面発表 ---------- */
 const Grand=(()=>{
   const el=$("grand"),cv=$("confetti"),cx=cv.getContext("2d");let run=false,P=[],W=0,H=0;
   const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -520,10 +667,13 @@ const Grand=(()=>{
     P.forEach(p=>{p.y+=p.vy;p.sw+=.05;p.x+=p.vx+Math.sin(p.sw)*.8;p.r+=p.vr;if(p.y>H+20){Object.assign(p,mk());p.y=-20;}
       cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.w/2,-p.h/2,p.w,p.h*Math.abs(Math.cos(p.sw))+1);cx.restore()});
     requestAnimationFrame(loop)}
-  function show(r,nums){const p=prizeOf(r),pad=String(S.max).length;
-    $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${String(n).padStart(pad,"0")}</div>`).join("");
+  function show(id,nums){const p=prizeOf(id),len=[...p.label].length;
+    const gr=$("gRank");gr.textContent=p.label;gr.style.fontSize=len<=2?"":`min(${Math.floor(86/len)}vw,${Math.max(3,Math.round(26/len*10)/10)}rem)`;
+    $("gPres").textContent=p.presenter?`抽選者　${p.presenter}`:"";el.setAttribute("aria-label",`${p.label} 当選発表`);
+    $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${fmt(n)}${nameOf(n)?`<small>${esc(nameOf(n))}</small>`:""}</div>`).join("");
     $("gPrize").textContent=p.name;
-    $("gImg").innerHTML=`<img class="g-img" alt="${esc(p.name)}">`;const im=$("gImg").querySelector("img");im.onerror=()=>{$("gImg").innerHTML=""};im.src=imgSrc(r);
+    const src=imgSrc(id);$("gImg").innerHTML="";
+    if(src){$("gImg").innerHTML=`<img class="g-img" alt="${esc(p.name)}">`;const im=$("gImg").querySelector("img");im.onerror=()=>{$("gImg").innerHTML=""};im.src=src;}
     el.hidden=false;el.scrollTop=0;el.classList.remove("go");void el.offsetWidth;el.classList.add("go");
     if(!still){size();P=Array.from({length:Math.min(240,Math.round(W*H/4500))},mk);if(!run){run=true;loop()}}}
   function hide(){el.hidden=true;run=false;cx.clearRect(0,0,W,H)}
