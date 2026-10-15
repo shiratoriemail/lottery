@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>EPデータウィーブ創業記念 抽選会</title>
+<title>EPデータウィーブ 発足記念イベント 抽選会</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Shippori+Mincho+B1:wght@800&family=Zen+Kaku+Gothic+New:wght@400;700&family=Chivo+Mono:wght@500;700&display=swap">
 <style>
@@ -43,8 +43,9 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
   display:flex;align-items:center;gap:.8em;padding-left:.3em}
 .title .eyebrow::before,.title .eyebrow::after{content:"";width:clamp(24px,8vw,90px);height:2px;background:linear-gradient(90deg,transparent,var(--gold))}
 .title .eyebrow::after{transform:scaleX(-1)}
-.title .eyebrow{white-space:nowrap}
-@media (max-width:560px){.title .eyebrow{font-size:clamp(.85rem,4.4vw,1.2rem);letter-spacing:.12em;gap:.5em}.title .eyebrow::before,.title .eyebrow::after{width:clamp(10px,4vw,24px)}}
+.title .eyebrow{white-space:nowrap;max-width:100%}
+.title{grid-template-columns:minmax(0,1fr)}
+@media (max-width:560px){.title .eyebrow{font-size:clamp(.7rem,3.4vw,1.1rem);letter-spacing:.06em;gap:.4em;padding-left:.06em;justify-content:center;width:100%}.title .eyebrow::before,.title .eyebrow::after{width:clamp(8px,3vw,24px)}}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,15vw,8rem);line-height:1.05;margin:0;letter-spacing:.12em;padding-left:.12em;
   background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite;
@@ -289,7 +290,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
   </div>
   <header class="title">
     <canvas id="sparkles" aria-hidden="true"></canvas>
-    <div class="eyebrow">EPデータウィーブ 創業記念</div>
+    <div class="eyebrow">EPデータウィーブ 発足記念イベント</div>
     <h1>抽選会</h1>
     <div class="rule">GRAND PRIZE DRAW</div>
   </header>
@@ -405,7 +406,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 
 <div id="summary" hidden role="dialog" aria-modal="true" aria-label="抽選結果">
   <div class="sumHead">
-    <div class="sumTitle"><span class="sumEyebrow">EPデータウィーブ 創業記念 抽選会</span><span class="sumMain">抽選結果</span></div>
+    <div class="sumTitle"><span class="sumEyebrow">EPデータウィーブ 発足記念イベント 抽選会</span><span class="sumMain">抽選結果</span></div>
     <button class="btn small" id="sumClose" type="button">閉じる</button>
   </div>
   <div class="sumGrid" id="sumGrid"></div>
@@ -421,7 +422,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
   <div class="rays"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
   <div class="grandInner">
-    <div class="g-eyebrow">EPデータウィーブ 創業記念 抽選会</div>
+    <div class="g-eyebrow">EPデータウィーブ 発足記念イベント 抽選会</div>
     <div class="g-presenter" id="gPres"></div>
     <div class="g-rank" id="gRank"></div>
     <div class="g-title" id="gTitle">大当たり</div>
@@ -441,7 +442,7 @@ const BOARD={on:"全画面で表示（標準）",off:"全画面にしない"};
 const boardOptions=sel=>Object.entries(BOARD).map(([k,v])=>`<option value="${k}" ${(sel==="off"?"off":"on")===k?"selected":""}>${v}</option>`).join("");
 const PRESET_LABEL="推奨プランを読み込む";
 const PRESET=[
-  {label:"創業記念特賞",name:"旅行券 5万円",count:1,fx:"grand"},
+  {label:"発足記念特賞",name:"旅行券 5万円",count:1,fx:"grand"},
   {label:"未来創造賞",name:"高級家電",count:2,fx:"grand"},
   {label:"感謝賞",name:"高級レストラン食事券",count:5,fx:"mid"},
   {label:"チャレンジ賞",name:"Amazonギフト券 5,000円",count:20,fx:"normal"},
@@ -958,7 +959,7 @@ const Grand=(()=>{
     requestAnimationFrame(loop)}
   function show(id,nums){const p=prizeOf(id),len=[...p.label].length,rv=p.fx==="revival";
     mode=rv?"ember":"gold";el.classList.toggle("revive",rv);$("gTitle").textContent=rv?"復活当選":"大当たり";
-    el.querySelector(".g-eyebrow").textContent=rv?"REVIVAL ― 敗者復活":"EPデータウィーブ 創業記念 抽選会";
+    el.querySelector(".g-eyebrow").textContent=rv?"REVIVAL ― 敗者復活":"EPデータウィーブ 発足記念イベント 抽選会";
     const gr=$("gRank");gr.textContent=p.label;gr.style.fontSize=len<=2?"":`min(${Math.floor(86/len)}vw,${Math.max(3,Math.round(26/len*10)/10)}rem)`;
     $("gPres").textContent=p.presenter?`抽選者　${p.presenter}`:"";el.setAttribute("aria-label",`${p.label} 当選発表`);
     $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${fmt(n)}</div>`).join("");
@@ -980,7 +981,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/15-1";
+const PAGE_VERSION="10/15-2";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
