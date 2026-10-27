@@ -435,7 +435,6 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 
 <script>
 const KEY="lottery-roulette-v1";
-const MAX_TIERS=10;
 const FX={grand:"豪華（金色）",revival:"敗者復活スペシャル（赤・炎）",mid:"やや豪華",normal:"通常"};
 const isBig=fx=>fx==="grand"||fx==="revival"; // カウントダウン＋全画面発表あり
 const BOARD={on:"全画面で表示（標準）",off:"全画面にしない"};
@@ -490,7 +489,7 @@ function pool(p){const ex=parseNums(S.exclude),won=new Set(Object.values(S.resul
   return a}
 function prizeOf(id){return S.prizes.find(p=>p.id===id)||S.extras.find(p=>p.id===id)}
 function posOf(id){return S.prizes.findIndex(p=>p.id===id)}
-function tierCls(id){const i=posOf(id);if(i<0){const q=prizeOf(id);return q&&q.fx==="revival"?"tierRev":"tierx"}return "tier"+Math.min(10,i+1)}
+function tierCls(id){const i=posOf(id);if(i<0){const q=prizeOf(id);return q&&q.fx==="revival"?"tierRev":"tierx"}return "tier"+(i<10?i+1:5+(i-10)%6)} // 11賞目以降は5〜10等の色を順に使い回す
 const anyDrawn=()=>Object.keys(S.results).length>0;
 const fxOptions=sel=>Object.entries(FX).map(([k,v])=>`<option value="${k}" ${sel===k?"selected":""}>${v}</option>`).join("");
 
@@ -521,8 +520,8 @@ function renderSetup(){
       </div>
     </div>`}).join("");
   renderPlans();
-  $("addTier").disabled=locked||n>=MAX_TIERS;$("presetBtn").disabled=locked;
-  $("tierNote").textContent=locked?"抽選を始めた後は賞の追加・削除・並べ替えはできません。途中で増やすときは抽選画面の「追加抽選」を使ってください":`現在 ${n}賞（最大${MAX_TIERS}）`;
+  $("addTier").disabled=locked;$("presetBtn").disabled=locked;
+  $("tierNote").textContent=locked?"抽選を始めた後は賞の追加・削除・並べ替えはできません。途中で増やすときは抽選画面の「追加抽選」を使ってください":`現在 ${n}賞（何賞でも追加できます）`;
 }
 const plans=()=>S.extras.filter(q=>q.planned);
 function renderPlans(){
@@ -580,7 +579,7 @@ async function onPhotoInput(e){const inp=e.target;if(inp.type!=="file")return;co
   catch(err){msg("写真をサーバーに保存できませんでした。この端末には表示されます。通信状態を確認して、もう一度選び直してください。");}}
 $("prizeRows").addEventListener("change",onPhotoInput);
 $("planRows").addEventListener("change",onPhotoInput);
-$("addTier").onclick=()=>{if(anyDrawn()||S.prizes.length>=MAX_TIERS)return;readForm();
+$("addTier").onclick=()=>{if(anyDrawn())return;readForm();
   const id=uid();S.prizes.push({id,label:`${S.prizes.length+1}等`,name:"",count:10,presenter:"",fx:"normal"});
   S.order=drawOrder();S.idx=0;save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
 let presetArmed=null;
@@ -981,7 +980,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/15-2";
+const PAGE_VERSION="10/27-1";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
