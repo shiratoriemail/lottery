@@ -31,16 +31,24 @@ HEADERS = {
     "Accept": "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
 }
-STATE_PATH = "data/state.json"
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+NS_RE = re.compile(r"^[a-z0-9_-]{1,20}$")
+# 別のページ（例: 商品名表示版 /api/ns/shohin/...）は data/<ns>/ に分けて保存する。ns なしは従来どおり data/
+
+
+def ns_dir():
+    ns = (request.view_args or {}).get("ns", "")
+    if ns and not NS_RE.match(ns):
+        raise StoreError("不正な保存先です")
+    return f"data/{ns}/" if ns else "data/"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024
 CORS(app, origins=ORIGINS)
 
 lock = threading.Lock()
-cache = {"loaded": False, "rev": 0, "state": None, "sha": None}
-img_cache = {}  # id -> {"data": str, "sha": str}
+caches = {}  # 保存先ごと: {"loaded","rev","state","sha"}
+img_cache = {}  # path -> {"data": str, "sha": str}
 branch_ready = {"ok": False}
 
 
@@ -124,16 +132,18 @@ def delete_file(path, sha, message):
         raise StoreError(f"削除に失敗しました ({r.status_code})")
 
 
-def load_state():
+def load_state(d):
+    cache = caches.setdefault(d, {"loaded": False, "rev": 0, "state": None, "sha": None})
     if cache["loaded"]:
-        return
-    text, sha = read_file(STATE_PATH)
+        return cache
+    text, sha = read_file(d + "state.json")
     if text:
         j = json.loads(text)
         cache["rev"] = int(j.get("rev", 0))
         cache["state"] = j.get("state")
     cache["sha"] = sha
     cache["loaded"] = True
+    return cache
 
 
 @app.errorhandler(StoreError)
@@ -147,7 +157,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 @app.after_request
 def no_cache(resp):
     # 端末やブラウザに古いデータ・古いページを残さない
-    if request.path.startswith("/api/") or request.path in ("/", "/index.html"):
+    if request.path.startswith("/api/") or request.path in ("/", "/index.html", "/shohin", "/shohin.html"):
         resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -161,6 +171,15 @@ def page():
     return health()
 
 
+@app.get("/shohin")
+@app.get("/shohin.html")
+def shohin_page():
+    """商品名表示版のページ"""
+    if os.path.exists(os.path.join(BASE_DIR, "shohin.html")):
+        return send_from_directory(BASE_DIR, "shohin.html")
+    return jsonify({"error": "shohin.html がリポジトリにありません"}), 404
+
+
 @app.get("/prize<int:n>.<ext>")
 def prize_file(n, ext):
     name = f"prize{n}.{ext}"
@@ -171,80 +190,87 @@ def prize_file(n, ext):
 
 @app.get("/api/health")
 def health():
-    return jsonify({"ok": True, "repo": REPO, "branch": BRANCH, "token": bool(TOKEN)})
+    return jsonify({"ok": True, "repo": REPO, "branch": BRANCH, "token": bool(TOKEN), "ns": True})
 
 
 @app.get("/api/state")
-def get_state():
+@app.get("/api/ns/<ns>/state")
+def get_state(ns=""):
+    d = ns_dir()
     with lock:
-        load_state()
+        cache = load_state(d)
         return jsonify({"rev": cache["rev"], "state": cache["state"]})
 
 
 @app.post("/api/state")
-def put_state():
+@app.post("/api/ns/<ns>/state")
+def put_state(ns=""):
     body = request.get_json(silent=True) or {}
     state = body.get("state")
     if not isinstance(state, dict) or not isinstance(state.get("prizes"), list):
         return jsonify({"error": "データの形式が正しくありません"}), 400
     base_rev = int(body.get("rev", -1))
+    d = ns_dir()
     with lock:
-        load_state()
+        cache = load_state(d)
         if base_rev != cache["rev"]:
             # 他の端末が先に保存した → 最新を返して、その端末に合わせてもらう
             return jsonify({"rev": cache["rev"], "state": cache["state"]}), 409
         new_rev = cache["rev"] + 1
         text = json.dumps({"rev": new_rev, "state": state}, ensure_ascii=False, separators=(",", ":"))
-        cache["sha"] = write_file(STATE_PATH, text, cache["sha"], f"抽選データ更新 rev {new_rev}")
+        cache["sha"] = write_file(d + "state.json", text, cache["sha"], f"抽選データ更新 rev {new_rev}")
         cache["rev"] = new_rev
         cache["state"] = state
         return jsonify({"rev": new_rev})
 
 
 def img_path(img_id):
-    return f"data/img/{img_id}.txt"
+    return f"{ns_dir()}img/{img_id}.txt"
 
 
 @app.get("/api/img/<img_id>")
-def get_img(img_id):
+@app.get("/api/ns/<ns>/img/<img_id>")
+def get_img(img_id, ns=""):
     if not ID_RE.match(img_id):
         return jsonify({"error": "不正なID"}), 400
     with lock:
-        if img_id not in img_cache:
+        if img_path(img_id) not in img_cache:
             text, sha = read_file(img_path(img_id))
             if text is None:
                 return jsonify({"error": "写真がありません"}), 404
-            img_cache[img_id] = {"data": text, "sha": sha}
-        return jsonify({"data": img_cache[img_id]["data"]})
+            img_cache[img_path(img_id)] = {"data": text, "sha": sha}
+        return jsonify({"data": img_cache[img_path(img_id)]["data"]})
 
 
 @app.put("/api/img/<img_id>")
-def put_img(img_id):
+@app.put("/api/ns/<ns>/img/<img_id>")
+def put_img(img_id, ns=""):
     if not ID_RE.match(img_id):
         return jsonify({"error": "不正なID"}), 400
     data = (request.get_json(silent=True) or {}).get("data", "")
     if not isinstance(data, str) or not data.startswith("data:image/"):
         return jsonify({"error": "画像データではありません"}), 400
     with lock:
-        sha = img_cache.get(img_id, {}).get("sha")
+        sha = img_cache.get(img_path(img_id), {}).get("sha")
         if sha is None:
             _, sha = read_file(img_path(img_id))
         new_sha = write_file(img_path(img_id), data, sha, f"景品写真 {img_id}")
-        img_cache[img_id] = {"data": data, "sha": new_sha}
+        img_cache[img_path(img_id)] = {"data": data, "sha": new_sha}
         return jsonify({"ok": True})
 
 
 @app.delete("/api/img/<img_id>")
-def del_img(img_id):
+@app.delete("/api/ns/<ns>/img/<img_id>")
+def del_img(img_id, ns=""):
     if not ID_RE.match(img_id):
         return jsonify({"error": "不正なID"}), 400
     with lock:
-        sha = img_cache.get(img_id, {}).get("sha")
+        sha = img_cache.get(img_path(img_id), {}).get("sha")
         if sha is None:
             _, sha = read_file(img_path(img_id))
         if sha:
             delete_file(img_path(img_id), sha, f"景品写真を削除 {img_id}")
-        img_cache.pop(img_id, None)
+        img_cache.pop(img_path(img_id), None)
         return jsonify({"ok": True})
 
 

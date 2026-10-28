@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>EPデータウィーブ 発足記念イベント 抽選会（商品名表示版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Shippori+Mincho+B1:wght@800&family=Zen+Kaku+Gothic+New:wght@400;700&family=Chivo+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one stage screen — header bar, tier rail, big draw stage, winners log below. Single dark "stage" look by choice. */
+:root{
+  --bg:#12101c; --panel:#1d1a2c; --line:#35304d; --fg:#f3efe6; --muted:#a39db8;
+  --gold:#f2c14e; --red:#e4573d; --silver:#c9cbd6; --bronze:#d08a52; --teal:#46c2b0;
+  --t5:#e98bb5; --t6:#6fa8f0; --t7:#a7d36b; --t8:#b39cf0; --t9:#f0a35e; --t10:#7fd6e0;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --num:"Chivo Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+body{margin:0}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.6;padding-inline:16px;padding-block:16px 40px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+/* gorgeous title */
+.topbar{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px}
+.sync{margin-right:auto;font-size:.8rem;color:var(--muted);display:inline-flex;align-items:center;gap:6px;min-width:0}
+.sync::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync[data-kind="ok"]::before{background:var(--teal)}
+.sync[data-kind="wait"]::before,.sync[data-kind="warn"]::before{background:var(--gold)}
+.sync[data-kind="off"]::before{background:var(--red)}
+.syncChoice{background:var(--panel);border:2px solid var(--gold);border-radius:14px;padding:16px;display:grid;gap:8px}
+.syncChoice p{margin:0}
+.shareBox{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.shareBox h2{margin:0;font-size:1rem}
+.btn.apply{background:var(--gold);border-color:var(--gold);color:#241a00;font-family:var(--display);font-weight:400;font-size:1.15rem;padding:14px 22px;letter-spacing:.04em}
+.btn.apply:disabled{opacity:.5}
+#syncStatus{cursor:pointer;background:none;border:0;padding:0;font:inherit}
+.title{position:relative;text-align:center;padding-block:8px 18px;display:grid;gap:6px;justify-items:center;overflow:hidden}
+.title .eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;font-size:clamp(1.1rem,3.6vw,1.9rem);letter-spacing:.3em;color:var(--gold);
+  display:flex;align-items:center;gap:.8em;padding-left:.3em}
+.title .eyebrow::before,.title .eyebrow::after{content:"";width:clamp(24px,8vw,90px);height:2px;background:linear-gradient(90deg,transparent,var(--gold))}
+.title .eyebrow::after{transform:scaleX(-1)}
+.title .eyebrow{white-space:nowrap;max-width:100%}
+.title{grid-template-columns:minmax(0,1fr)}
+@media (max-width:560px){.title .eyebrow{font-size:clamp(.7rem,3.4vw,1.1rem);letter-spacing:.06em;gap:.4em;padding-left:.06em;justify-content:center;width:100%}.title .eyebrow::before,.title .eyebrow::after{width:clamp(8px,3vw,24px)}}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,15vw,8rem);line-height:1.05;margin:0;letter-spacing:.12em;padding-left:.12em;
+  background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite;
+  filter:drop-shadow(0 4px 0 #6b4a12) drop-shadow(0 0 24px rgba(242,193,78,.35))}
+@keyframes shine{from{background-position:100% 0}to{background-position:-150% 0}}
+.title .rule{font-size:.85rem;letter-spacing:.4em;color:var(--muted);padding-left:.4em}
+#sparkles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.title>:not(canvas){position:relative}
+.btn{font:700 1rem var(--body);border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:10px 16px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff;font-family:var(--display);font-weight:400;font-size:1.3rem;padding:14px 28px;letter-spacing:.06em}
+.btn.primary:disabled{opacity:.4;cursor:not-allowed}
+.btn.small{font-size:.85rem;padding:6px 12px}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+
+/* settings */
+#setup{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:16px}
+#setup h2{margin:0;font-size:1.1rem}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+input{font:500 1rem var(--body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{font-family:var(--num)}
+.prizeRow{display:grid;grid-template-columns:4.5rem 1fr 6rem;gap:8px;align-items:center}
+.prizeRow b{font-family:var(--display);font-weight:400}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.err{color:var(--red);font-weight:700}
+
+/* tier rail */
+.rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.tier{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel);display:grid;gap:2px;min-width:0}
+.tier .t{font-family:var(--display);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tier .p{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tier.now{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.tier.done{opacity:.55}
+.tier.done .t::after{content:" 済";font-size:.75rem;color:var(--teal)}
+
+/* stage */
+#stage{border-radius:18px;padding:24px 20px;display:grid;gap:18px;justify-items:center;text-align:center;
+  background:radial-gradient(ellipse at 50% 0%,#2d2546 0%,var(--panel) 70%);border:1px solid var(--line);min-height:320px}
+.rank{overflow-wrap:anywhere;font-family:var(--display);font-size:clamp(2.4rem,9vw,5rem);line-height:1;letter-spacing:.06em}
+.prize{font-family:var(--display);font-size:clamp(1.2rem,4vw,2rem);color:var(--gold);min-height:1.4em;opacity:0;transform:scale(.8);transition:opacity .5s,transform .5s cubic-bezier(.2,1.6,.4,1)}
+.prize.show{opacity:1;transform:none}
+.sub{color:var(--muted);margin:0}
+.balls{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}
+.ball{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;font-size:var(--bs,2rem);
+  min-width:calc(var(--bs,2rem)*2.6);padding:.25em .4em;border-radius:12px;background:var(--bg);border:2px solid var(--line);color:var(--muted)}
+.ball.win{color:var(--bg);background:var(--c,var(--gold));border-color:var(--c,var(--gold));animation:pop .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{from{transform:scale(.4)}to{transform:none}}
+.tier1{--c:var(--gold)}.tier2{--c:var(--silver)}.tier3{--c:var(--bronze)}.tier4{--c:var(--teal)}.tier5{--c:var(--t5)}.tier6{--c:var(--t6)}.tier7{--c:var(--t7)}.tier8{--c:var(--t8)}.tier9{--c:var(--t9)}.tier10{--c:var(--t10)}
+.rank[class*="tier"]{color:var(--c)}
+.tierBtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:8px}
+textarea,select{font:500 1rem var(--body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+textarea{width:100%;box-sizing:border-box;resize:vertical;line-height:1.5}
+input,select{width:100%;box-sizing:border-box}
+select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.pbHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pbHead .dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.pbTools{margin-left:auto;display:flex;gap:6px}
+.pbGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.pbGrid .wide{grid-column:1/-1}
+.tierx{--c:var(--t6)}
+.presenter{color:var(--muted);letter-spacing:.15em;font-size:1rem;min-height:1.2em;margin-bottom:-10px}
+.ball .bn{display:block}
+.ball .bnm{display:block;font-family:var(--body);font-size:.32em;font-weight:700;line-height:1.3;margin-top:.15em}
+.ball .bnm:empty{display:none}
+.extraWrap{display:grid;gap:12px;justify-items:center;width:100%}
+.extraPanel{width:100%;max-width:720px;box-sizing:border-box;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px}
+#copyBox{width:100%;font-family:var(--num);font-size:.85rem}
+#countdown{position:fixed;inset:0;z-index:45;background:rgba(8,5,0,.97);display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding-inline:16px}
+.cdLabel{font-family:var(--display);font-size:clamp(1.6rem,6vw,3rem);color:#ffe08a;letter-spacing:.1em}
+.cdNum{font-family:var(--display);font-size:clamp(8rem,40vw,22rem);line-height:1;
+  background:linear-gradient(160deg,#fff4c2,#f2c14e 45%,#b8862b);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 40px rgba(255,200,80,.6));animation:cdPop .95s ease-out both}
+@keyframes cdPop{0%{transform:scale(2.2);opacity:0}25%{opacity:1;transform:scale(1)}100%{transform:scale(.85);opacity:.25}}
+.cdPres{color:#fff3c4;letter-spacing:.15em}
+.g-presenter{color:#fff3c4;letter-spacing:.2em;font-size:clamp(.95rem,2.6vw,1.3rem);min-height:1em}
+.g-num small{display:block;font-family:var(--body);font-size:.28em;font-weight:700;margin-top:.2em}
+.g-rank{white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+
+/* log */
+#log{display:grid;gap:10px}
+#log h2{margin:0;font-size:1.1rem}
+.logRow{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:grid;gap:6px}
+.logRow .h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.logRow .h b{font-family:var(--display);font-weight:400;font-size:1.1rem}
+.logRow .nums{font-family:var(--num);font-variant-numeric:tabular-nums;word-break:break-word;color:var(--fg)}
+.foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+@media (max-width:560px){.rail{grid-template-columns:repeat(2,1fr)}.prizeRow{grid-template-columns:3.5rem 1fr 4.5rem}}
+/* prize reveal */
+.reveal{display:grid;gap:12px;justify-items:center;width:100%}
+.prizeImg{width:min(520px,100%);aspect-ratio:4/3;object-fit:cover;border-radius:16px;border:3px solid var(--c,var(--gold));
+  box-shadow:0 0 0 6px rgba(242,193,78,.15),0 18px 40px rgba(0,0,0,.5);background:var(--bg);animation:pop .6s cubic-bezier(.2,1.6,.4,1) both;max-width:100%}
+.mystery{width:min(520px,100%);aspect-ratio:4/3;border-radius:16px;border:3px dashed var(--line);display:grid;place-items:center;
+  font-family:var(--display);font-size:clamp(3rem,12vw,6rem);color:var(--line);max-width:100%}
+.imgCell{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.thumb{width:56px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.fileBtn{position:relative;overflow:hidden}
+.fileBtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.prizeBlock{display:grid;gap:10px;padding-block:14px;border-bottom:1px solid var(--line)}
+/* 人数が多い賞：全画面ボード表示（番号を画面いっぱいに） */
+body.noscroll{overflow:hidden}
+body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 8px)}
+#stage.board{position:fixed;inset:0;z-index:30;margin:0;border:0;border-radius:0;height:100%;max-width:none;box-sizing:border-box;overflow:hidden;
+  padding:calc(env(safe-area-inset-top,0px) + 50px) 24px calc(env(safe-area-inset-bottom,0px) + 10px);
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr) auto auto;
+  grid-template-areas:"img pres ." "img rank ." "img prize ." "img sub ." "balls balls balls" "ctrl ctrl ctrl" "extra extra extra";
+  column-gap:28px;row-gap:6px;align-items:center;justify-items:center;min-height:0}
+#stage.board #presenter{grid-area:pres;margin:0}
+#stage.board #rank{grid-area:rank;font-size:clamp(2rem,7vh,5rem)}
+#stage.board #reveal{grid-area:img;width:auto;justify-self:start;max-width:100%}
+#stage.board #reveal .mystery{width:auto;height:min(22vh,230px);aspect-ratio:4/3;font-size:clamp(2rem,9vh,5rem)}
+#stage.board .prizeImg{width:auto;height:min(24vh,260px);max-width:100%}
+#stage.board #rank,#stage.board #presenter,#stage.board #prize,#stage.board #sub{text-align:center;justify-self:center}
+#stage.board #prize{grid-area:prize;font-size:clamp(1.2rem,4.5vh,2.6rem);min-height:0}
+#stage.board #sub{grid-area:sub}
+#stage.board #balls{grid-area:balls;align-self:stretch;align-content:center;height:100%;min-height:0;overflow:hidden;gap:clamp(6px,1.2vh,16px)}
+#stage.board > .controls{grid-area:ctrl}
+#stage.board .extraWrap{grid-area:extra}
+#stage.board .extraPanel{max-height:40vh;overflow:auto}
+@media (max-aspect-ratio:1/1){
+  #stage.board{grid-template-columns:minmax(0,1fr);grid-template-areas:"pres" "rank" "img" "prize" "sub" "balls" "ctrl" "extra";grid-template-rows:auto auto auto auto auto minmax(0,1fr) auto auto}
+  #stage.board #reveal .mystery,#stage.board .prizeImg{height:min(16vh,200px)}}
+/* 敗者復活スペシャル（赤・炎） */
+.tierRev{--c:#ff6a3d}
+#stage.suspense.revive{animation:glowRed .8s ease-in-out infinite alternate;background:radial-gradient(ellipse at 50% 25%,#6a1010 0%,#2a080c 55%,#12060a 100%)}
+#stage.suspense.revive #rank{color:#ff8a5c;text-shadow:0 0 30px rgba(255,80,40,.8)}
+#stage.suspense.revive #sub{color:#ffc9a3}
+@keyframes glowRed{from{box-shadow:0 0 0 2px #ff5a3c,0 0 24px rgba(255,90,60,.25)}to{box-shadow:0 0 0 2px #ff5a3c,0 0 90px rgba(255,70,40,.7)}}
+#stage.suspense.revive .ball:not(.win){border-color:#ff5a3c}
+#countdown.revive{background:radial-gradient(circle at 50% 60%,rgba(120,10,10,.97),rgba(10,2,6,.98))}
+#countdown.revive .cdNum{background:linear-gradient(170deg,#fff3d6,#ffb347 35%,#ff4d2e 70%,#8a0f0f);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 50px rgba(255,80,40,.75))}
+#countdown.revive .cdLabel{color:#ffd0b0}
+.cdEyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;letter-spacing:.35em;color:#ff8a5c;font-size:clamp(1rem,3vw,1.6rem)}
+#grand.revive{background:radial-gradient(circle at 50% 70%,#7a1408 0%,#2a0606 55%,#070103 100%)}
+#grand.revive .rays{background:repeating-conic-gradient(from 0deg,rgba(255,110,60,.22) 0deg 5deg,transparent 5deg 13deg);animation-duration:22s}
+#grand.revive .g-eyebrow{color:#ff9a6b}
+#grand.revive .g-rank{background:linear-gradient(100deg,#8a0f0f 0%,#ff4d2e 20%,#ffb347 40%,#fff3d6 50%,#ff8a3c 62%,#ff3b2f 80%,#8a0f0f 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;
+  filter:drop-shadow(0 6px 0 #4a0505) drop-shadow(0 0 46px rgba(255,80,40,.75))}
+#grand.revive .g-title{color:#fff0e0;text-shadow:0 0 20px rgba(255,90,40,.95),0 0 60px rgba(255,60,30,.6);letter-spacing:.4em}
+#grand.revive .g-num{background:linear-gradient(160deg,#ffe2c4,#ff8a3c 45%,#c4220f);color:#2a0400;box-shadow:0 0 0 3px #ffd2b0,0 0 50px rgba(255,80,40,.8)}
+#grand.revive .g-img{border-color:#ff6a3d;box-shadow:0 0 60px rgba(255,80,40,.55)}
+#grand.revive .g-prize{color:#ffc9a3}
+#grand.revive #grandClose{border-color:#ff6a3d;color:#ffd0b0}
+#grand.revive.go .g-rank{animation:rise 1.1s cubic-bezier(.2,1.2,.4,1) both,shine 4s linear 1.1s infinite}
+@keyframes rise{0%{transform:translateY(60%) scale(.6);opacity:0;filter:blur(10px) brightness(3)}60%{opacity:1;filter:blur(0) brightness(1.6)}100%{transform:none;opacity:1}}
+/* 結果一覧（1画面にまとめて表示） */
+#summary{position:fixed;inset:0;z-index:40;--u:16px;font-size:var(--u);box-sizing:border-box;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 0%,#2d2546 0%,var(--bg) 70%);color:var(--fg);
+  padding:calc(env(safe-area-inset-top,0px) + .8em) 1.2em calc(env(safe-area-inset-bottom,0px) + .8em);display:grid;grid-template-rows:auto minmax(0,1fr);gap:.8em}
+.sumHead{display:flex;align-items:center;justify-content:space-between;gap:1em}
+.sumTitle{display:flex;align-items:baseline;gap:.8em;flex-wrap:wrap}
+.sumEyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;color:var(--gold);letter-spacing:.2em;font-size:1em}
+.sumMain{font-family:var(--display);font-size:2em;letter-spacing:.1em;
+  background:linear-gradient(100deg,#b8862b,#ffe9a8 30%,#f2c14e 55%,#ffe08a 80%,#b8862b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sumGrid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));grid-auto-flow:row dense;gap:.8em;align-content:start;min-height:0}
+.sumCard{display:flex;gap:.8em;align-items:flex-start;padding:.7em;border:2px solid var(--c,var(--line));border-radius:.8em;background:rgba(18,16,28,.75);min-width:0}
+.sumCard.w2{grid-column:span 2}.sumCard.wall{grid-column:1/-1}
+.sumImg{flex:none;width:7.5em;aspect-ratio:4/3;object-fit:cover;border-radius:.5em;border:1px solid var(--line);cursor:zoom-in;background:var(--bg)}
+.sumBody{display:grid;gap:.35em;min-width:0}
+.sumLabel{font-family:var(--display);font-size:1.5em;line-height:1.1;color:var(--c)}
+.sumLabel small{font-family:var(--body);font-size:.5em;color:var(--muted);margin-left:.6em;letter-spacing:0}
+.sumName{font-family:var(--display);font-size:1.05em;color:var(--fg)}
+.sumNums{display:flex;flex-wrap:wrap;gap:.3em}
+.sumNums span{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;font-size:1.15em;line-height:1;padding:.22em .35em;border-radius:.3em;background:var(--c);color:var(--bg)}
+.sumCard.wall .sumImg,.sumCard.w2 .sumImg{width:9em}
+/* 写真の拡大表示 */
+.prizeImg,.g-img,.thumb{cursor:zoom-in}
+.zoomHint{font-size:.8rem;color:var(--muted);margin-top:-4px}
+.exPhoto{display:grid;gap:6px}
+#exCopy{width:auto;max-width:100%}
+#stage.board .zoomHint{display:none}
+#photoView{position:fixed;inset:0;z-index:60;background:rgba(6,5,12,.95);display:grid;grid-template-rows:minmax(0,1fr) auto auto;justify-items:center;align-items:center;gap:12px;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);cursor:zoom-out}
+#photoImg{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:14px;border:3px solid var(--gold);
+  box-shadow:0 0 60px rgba(242,193,78,.35);animation:pvIn .35s cubic-bezier(.2,1.3,.4,1) both;min-height:0}
+@keyframes pvIn{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.pvCap{display:flex;flex-wrap:wrap;gap:.2em 1em;justify-content:center;align-items:baseline;text-align:center}
+#pvLabel{font-family:var(--display);font-size:clamp(1.4rem,4vw,2.6rem);color:var(--gold)}
+#pvName{font-family:var(--display);font-size:clamp(1.2rem,3.4vw,2.2rem);color:var(--fg)}
+#photoClose{cursor:pointer}
+@media (prefers-reduced-motion:reduce){#photoImg{animation:none}}
+/* 1等 suspense on stage */
+#stage.suspense{animation:glow 1s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 0 2px var(--gold),0 0 20px rgba(242,193,78,.2)}to{box-shadow:0 0 0 2px var(--gold),0 0 70px rgba(242,193,78,.65)}}
+#stage.suspense .ball:not(.win){border-color:var(--gold);color:var(--fg)}
+
+/* 1等 grand reveal overlay */
+#grand{position:fixed;inset:0;z-index:50;overflow:auto;background:radial-gradient(circle at 50% 38%,#4a3409 0%,#1a1103 55%,#050300 100%);color:#fff7e0;
+  padding-inline:16px;padding-block:calc(env(safe-area-inset-top,0px) + 24px) calc(env(safe-area-inset-bottom,0px) + 24px)}
+#grand .rays{position:fixed;left:50%;top:38%;width:240vmax;height:240vmax;transform:translate(-50%,-50%);pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,rgba(255,214,110,.2) 0deg 6deg,transparent 6deg 15deg);
+  -webkit-mask-image:radial-gradient(circle,#000 0%,transparent 45%);mask-image:radial-gradient(circle,#000 0%,transparent 45%);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+#grand::after{content:"";position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:3}
+#grand.go::after{animation:flash 1s ease-out}
+@keyframes flash{0%{opacity:.95}100%{opacity:0}}
+.grandInner{position:relative;z-index:1;min-height:100%;max-width:960px;margin:0 auto;display:grid;align-content:center;justify-items:center;gap:clamp(10px,2vh,20px);text-align:center}
+.g-eyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;letter-spacing:.3em;padding-left:.3em;color:#f2c14e;font-size:clamp(1rem,3vw,1.5rem)}
+.g-rank{font-family:var(--display);font-size:clamp(4rem,min(30vw,20vh),15rem);line-height:.95;letter-spacing:.06em;padding-left:.06em;
+  background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 0 #6b4a12) drop-shadow(0 0 40px rgba(255,200,80,.6))}
+.g-title{font-family:var(--display);font-size:clamp(1.3rem,min(6vw,5vh),3.2rem);letter-spacing:.3em;padding-left:.3em;color:#fff7e0;text-shadow:0 0 18px rgba(255,200,80,.9)}
+.g-nums{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(10px,3vw,24px)}
+.g-num{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;font-size:clamp(2.4rem,min(15vw,11vh),7.5rem);line-height:1;padding:.12em .3em;border-radius:16px;color:#2a1a00;
+  background:linear-gradient(160deg,#fff4c2,#f2c14e 45%,#b8862b);box-shadow:0 0 0 3px #fff3c4,0 0 44px rgba(255,200,80,.75)}
+.g-img{width:auto;height:min(30vh,330px);max-width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:16px;border:4px solid #f2c14e;box-shadow:0 0 50px rgba(255,200,80,.5)}
+.g-prize{font-family:var(--display);font-size:clamp(1.3rem,min(6vw,5vh),3rem);color:#ffe08a;text-wrap:balance}
+#grandClose{position:fixed;z-index:4;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;background:rgba(0,0,0,.45);border-color:#f2c14e;color:#ffe08a}
+#grand.go .g-eyebrow{animation:fadeUp .6s .2s both}
+#grand.go .g-rank{animation:slam .9s cubic-bezier(.2,1.4,.4,1) both,shine 5s linear .9s infinite}
+#grand.go .g-title{animation:fadeUp .6s .6s both}
+#grand.go .g-num{animation:popBig .7s cubic-bezier(.2,1.6,.4,1) both}
+#grand.go #gImg{animation:fadeUp .8s 1.7s both}
+#grand.go .g-prize{animation:fadeUp .8s 2s both}
+#grand.go #grandClose{animation:fadeUp .6s 2.6s both}
+@keyframes slam{0%{transform:scale(3);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes popBig{0%{transform:scale(.2) rotate(-8deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}
+  #stage.suspense,#grand .rays,#grand.go *,#grand.go::after,.cdNum{animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topbar">
+    <button class="sync" id="syncStatus" data-kind="wait" type="button" aria-live="polite" title="押すと今すぐ確認します">接続中…</button>
+    <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
+    <button class="btn small" id="setupBtn" type="button">設定</button>
+  </div>
+  <div class="syncChoice" id="syncChoice" hidden>
+    <p><b>この端末の設定と、共有サーバーの設定が違います。</b>どちらを使いますか？</p>
+    <p class="note" id="syncChoiceInfo"></p>
+    <div class="controls" style="justify-content:flex-start">
+      <button class="btn" id="useLocal" type="button">この端末の設定を使う（共有サーバーを上書き）</button>
+      <button class="btn" id="useServer" type="button">共有サーバーの設定を使う</button>
+    </div>
+  </div>
+  <header class="title">
+    <canvas id="sparkles" aria-hidden="true"></canvas>
+    <div class="eyebrow">EPデータウィーブ 発足記念イベント</div>
+    <h1>抽選会</h1>
+    <div class="rule">GRAND PRIZE DRAW</div>
+  </header>
+
+  <section id="setup">
+    <h2>抽選の設定</h2>
+    <div class="grid2">
+      <label for="maxNum">配った番号札の最大番号（1〜この番号で抽選）
+        <input id="maxNum" type="number" min="1" value="80" inputmode="numeric">
+      </label>
+      <label for="exclude">欠席・対象外の番号（カンマ区切り、例：3,17,25）
+        <input id="exclude" type="text" placeholder="なし">
+      </label>
+    </div>
+    <div style="display:grid;gap:4px">
+      <h2>賞と景品</h2>
+      <p class="note">上ほど格上の賞です。抽選は一番下の賞から始まり、一番上の賞で終わります。</p>
+      <div id="prizeRows"></div>
+      <div class="tierBtns">
+        <button class="btn small" id="addTier" type="button">＋ 賞を追加</button>
+        <button class="btn small" id="presetBtn" type="button">推奨プランを読み込む</button>
+        <button class="btn small" id="importBtn" type="button">元のシステムから設定と写真を取り込む</button>
+        <span class="note" id="tierNote"></span>
+      </div>
+      <p class="note">写真は「写真を選ぶ」で登録できます（この端末に保存）。GitHubに prize1.jpg、prize2.jpg …（上から何番目か）の名前で置いても表示されます。</p>
+      <h2 style="margin-top:12px">敗者復活・追加抽選の景品（準備）</h2>
+      <p class="note">ここで準備した賞は、通常の抽選の順番には入りません。当日、抽選画面の「＋ 追加抽選」で呼び出し、対象の番号（クイズ正解者など）だけ入れて抽選します。</p>
+      <div id="planRows"></div>
+      <div class="tierBtns"><button class="btn small" id="addPlan" type="button">＋ 追加抽選の賞を準備</button></div>
+    </div>
+    <div class="shareBox">
+      <h2>端末間の共有</h2>
+      <p class="note" id="shareInfo">確認中…</p>
+      <div class="controls" style="justify-content:flex-start">
+        <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
+      </div>
+      <p class="note" id="shareMsg"></p>
+    </div>
+    <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
+    <div class="controls" style="justify-content:flex-start">
+      <button class="btn apply" id="applyBtn" type="button">設定を全端末に反映する</button>
+      <button class="btn primary" id="startBtn" type="button">この設定で開始</button>
+    </div>
+  </section>
+
+  <section id="main" hidden>
+    <div class="rail" id="rail"></div>
+  </section>
+
+  <section id="stage" hidden>
+    <div class="presenter" id="presenter"></div>
+    <div class="rank" id="rank"></div>
+    <div class="reveal" id="reveal"></div>
+    <div class="prize" id="prize"></div>
+    <p class="sub" id="sub"></p>
+    <div class="balls" id="balls"></div>
+    <div class="controls">
+      <button class="btn small" id="prevBtn" type="button" hidden>◀ 前の賞へ</button>
+      <button class="btn primary" id="drawBtn" type="button">ルーレット スタート</button>
+      <button class="btn" id="nextBtn" type="button" hidden>次へ</button>
+      <button class="btn small" id="redoBtn" type="button" hidden>この賞を引き直す</button>
+      <button class="btn" id="replayBtn" type="button" hidden>発表をもう一度</button>
+      <button class="btn primary" id="sumBtn" type="button" hidden>結果一覧を表示</button>
+      <button class="btn small" id="boardBtn" type="button" hidden>全画面で表示</button>
+      <label class="btn small fileBtn" id="stagePhotoBtn" for="stagePhotoFile" hidden>この賞の写真を選ぶ<input id="stagePhotoFile" type="file" accept="image/*"></label>
+    </div>
+    <div class="extraWrap">
+      <button class="btn small" id="extraBtn" type="button">＋ 追加抽選（敗者復活など）</button>
+      <div id="extraPanel" class="extraPanel" hidden>
+        <b>追加抽選</b>
+        <label for="exPlan" id="exPlanWrap">設定画面で準備した賞を使う<select id="exPlan"></select></label>
+        <div class="pbGrid">
+          <label for="exLabel">管理用の名前<input id="exLabel" type="text" value="敗者復活賞"></label>
+          <label for="exCount">当選人数<input id="exCount" type="number" min="1" value="1" inputmode="numeric"></label>
+          <label for="exName" class="wide">商品名（画面に大きく表示）<input id="exName" type="text"></label>
+          <label for="exOnly" class="wide">対象の番号（クイズ正解者など。空欄なら、まだ当選していない全員）<input id="exOnly" type="text" placeholder="例：12,45,103"></label>
+          <label for="exPres">抽選者（任意）<input id="exPres" type="text" placeholder="例：COO"></label>
+          <label for="exFx">演出<select id="exFx"></select></label>
+          <label for="exBoard">番号の全画面表示<select id="exBoard"></select></label>
+          <div class="wide exPhoto">
+            <span class="note">景品の写真（任意）</span>
+            <div class="imgCell">
+              <span id="exThumb"><span class="note">写真なし</span></span>
+              <label class="btn small fileBtn" for="exFile">写真を選ぶ<input id="exFile" type="file" accept="image/*"></label>
+              <select id="exCopy" aria-label="他の賞の写真を使う"></select>
+              <button class="btn small" id="exNoPhoto" type="button" hidden>写真を外す</button>
+            </div>
+          </div>
+        </div>
+        <p class="note" id="exMsg">今の抽選の次に差し込まれます。</p>
+        <div class="controls" style="justify-content:flex-start">
+          <button class="btn" id="exGo" type="button">この抽選を次に行う</button>
+          <button class="btn small" id="exCancel" type="button">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="log" hidden>
+    <div class="foot">
+      <h2>当選番号一覧</h2>
+      <div class="controls">
+        <button class="btn small" id="sumBtn2" type="button" hidden>結果一覧を表示</button>
+        <button class="btn small" id="copyBtn" type="button" hidden>結果をコピー</button>
+        <button class="btn small" id="resetBtn" type="button">最初からやり直す</button>
+      </div>
+    </div>
+    <div id="logRows"></div>
+    <textarea id="copyBox" rows="6" readonly hidden aria-label="コピー用の結果"></textarea>
+  </section>
+</div>
+
+<div id="countdown" hidden aria-live="assertive"></div>
+
+<div id="summary" hidden role="dialog" aria-modal="true" aria-label="抽選結果">
+  <div class="sumHead">
+    <div class="sumTitle"><span class="sumEyebrow">EPデータウィーブ 発足記念イベント 抽選会</span><span class="sumMain">抽選結果</span></div>
+    <button class="btn small" id="sumClose" type="button">閉じる</button>
+  </div>
+  <div class="sumGrid" id="sumGrid"></div>
+</div>
+
+<div id="photoView" hidden role="dialog" aria-modal="true" aria-label="景品の写真">
+  <img id="photoImg" alt="">
+  <div class="pvCap"><span id="pvLabel"></span><span id="pvName"></span></div>
+  <button class="btn" id="photoClose" type="button">閉じる</button>
+</div>
+
+<div id="grand" hidden role="dialog" aria-modal="true" aria-label="当選発表">
+  <div class="rays"></div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="grandInner">
+    <div class="g-eyebrow">EPデータウィーブ 発足記念イベント 抽選会</div>
+    <div class="g-presenter" id="gPres"></div>
+    <div class="g-rank" id="gRank"></div>
+    <div class="g-title" id="gTitle">大当たり</div>
+    <div class="g-nums" id="gNums"></div>
+    <div id="gImg"></div>
+    <div class="g-prize" id="gPrize"></div>
+    <button class="btn" id="grandClose" type="button">閉じる</button>
+  </div>
+</div>
+
+<script>
+const KEY="shohin-roulette-v1";
+const T=p=>p?(p.name||p.label||""):""; // 画面に出す名前＝商品名
+function rankSize(el,t){const n=[...(t||"")].length;el.style.fontSize=n<=6?"":`min(${(84/n).toFixed(1)}vw,${Math.max(1.6,40/n).toFixed(2)}rem)`;}
+const FX={grand:"豪華（金色）",revival:"敗者復活スペシャル（赤・炎）",mid:"やや豪華",normal:"通常"};
+const isBig=fx=>fx==="grand"||fx==="revival"; // カウントダウン＋全画面発表あり
+const BOARD={on:"全画面で表示（標準）",off:"全画面にしない"};
+const boardOptions=sel=>Object.entries(BOARD).map(([k,v])=>`<option value="${k}" ${(sel==="off"?"off":"on")===k?"selected":""}>${v}</option>`).join("");
+const PRESET_LABEL="推奨プランを読み込む";
+const PRESET=[
+  {label:"発足記念特賞",name:"旅行券 5万円",count:1,fx:"grand"},
+  {label:"未来創造賞",name:"高級家電",count:2,fx:"grand"},
+  {label:"感謝賞",name:"高級レストラン食事券",count:5,fx:"mid"},
+  {label:"チャレンジ賞",name:"Amazonギフト券 5,000円",count:20,fx:"normal"},
+  {label:"EPデータウィーブ賞",name:"スターバックスカード 3,000円",count:30,fx:"normal"}];
+const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function defaults(){return [
+  {id:"t1",label:"1等",name:"1等の景品名",count:2,presenter:"",fx:"grand"},
+  {id:"t2",label:"2等",name:"2等の景品名",count:5,presenter:"",fx:"mid"},
+  {id:"t3",label:"3等",name:"3等の景品名",count:15,presenter:"",fx:"normal"},
+  {id:"t4",label:"4等",name:"4等の景品名",count:20,presenter:"",fx:"normal"}]}
+let S={prizes:defaults(),extras:[],max:80,exclude:"",started:false,results:{},order:[],idx:0};
+function drawOrder(){return S.prizes.map(p=>p.id).reverse()}
+S.order=drawOrder();
+function migrate(v){
+  if(v.prizes.length&&v.prizes[0].id===undefined){ // 旧形式（1等〜N等）から移行
+    const ps=v.prizes.slice().sort((a,b)=>a.rank-b.rank);
+    ps.forEach(p=>{try{const d=localStorage.getItem("lottery-img-"+p.rank);if(d&&!localStorage.getItem("lottery-img-t"+p.rank))localStorage.setItem("lottery-img-t"+p.rank,d)}catch(e){}});
+    const res={};Object.keys(v.results||{}).forEach(r=>{res["t"+r]=v.results[r]});
+    v={prizes:ps.map(p=>({id:"t"+p.rank,label:p.rank+"等",name:p.name,count:p.count,presenter:"",fx:p.rank===1?"grand":p.rank===2?"mid":"normal"})),
+       extras:[],max:v.max||80,exclude:v.exclude||"",started:!!v.started,results:res,order:(v.order||[]).map(r=>"t"+r),idx:v.idx||0};
+    if(!v.order.length)v.order=v.prizes.map(p=>p.id).reverse();
+  }
+  v.extras=v.extras||[];v.results=v.results||{};delete v.roster;
+  return v;
+}
+try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes&&v.prizes.length)S=migrate(v);}catch(e){}
+let syncHook=null;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}if(syncHook)syncHook();}
+const $=id=>document.getElementById(id);
+const IMGKEY=id=>"shohin-img-"+id;
+function getImg(id){try{return localStorage.getItem(IMGKEY(id))||""}catch(e){return ""}}
+function setImg(id,d){try{d?localStorage.setItem(IMGKEY(id),d):localStorage.removeItem(IMGKEY(id));return true}catch(e){return false}}
+function imgSrc(id){const d=getImg(id);if(d)return d;const i=posOf(id);return i<0?"":`prize${i+1}.jpg`}
+function resizeFile(file){return new Promise((ok,ng)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
+  const m=1000,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.82))};im.onerror=ng;im.src=fr.result};fr.onerror=ng;fr.readAsDataURL(file)})}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function parseNums(t){return new Set(String(t).split(/[,、，\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
+function basePool(){const a=[];for(let i=1;i<=S.max;i++)a.push(i);return a}
+function digits(){return String(S.max).length}
+const fmt=n=>String(n).padStart(digits(),"0");
+function pool(p){const ex=parseNums(S.exclude),won=new Set(Object.values(S.results).flat());
+  let a=basePool().filter(i=>!ex.has(i)&&!won.has(i));
+  if(p&&p.only&&p.only.length){const s=new Set(p.only);a=a.filter(i=>s.has(i))}
+  return a}
+function prizeOf(id){return S.prizes.find(p=>p.id===id)||S.extras.find(p=>p.id===id)}
+function posOf(id){return S.prizes.findIndex(p=>p.id===id)}
+function tierCls(id){const i=posOf(id);if(i<0){const q=prizeOf(id);return q&&q.fx==="revival"?"tierRev":"tierx"}return "tier"+(i<10?i+1:5+(i-10)%6)} // 11賞目以降は5〜10等の色を順に使い回す
+const anyDrawn=()=>Object.keys(S.results).length>0;
+const fxOptions=sel=>Object.entries(FX).map(([k,v])=>`<option value="${k}" ${sel===k?"selected":""}>${v}</option>`).join("");
+
+/* ---------- setup ---------- */
+function renderSetup(){
+  $("maxNum").value=S.max;$("exclude").value=S.exclude;
+  const locked=anyDrawn(),n=S.prizes.length;
+  $("prizeRows").innerHTML=S.prizes.map((p,i)=>{const im=getImg(p.id),done=!!S.results[p.id];return `
+    <div class="prizeBlock ${tierCls(p.id)}">
+      <div class="pbHead"><span class="dot"></span><span class="note">上から${i+1}番目${done?"・抽選済み":""}</span>
+        <span class="pbTools">
+          <button class="btn small" type="button" data-up="${p.id}" ${locked||i===0?"disabled":""} aria-label="上へ移動">↑</button>
+          <button class="btn small" type="button" data-down="${p.id}" ${locked||i===n-1?"disabled":""} aria-label="下へ移動">↓</button>
+          <button class="btn small" type="button" data-rm="${p.id}" ${locked||n<=1?"disabled":""}>削除</button>
+        </span></div>
+      <div class="pbGrid">
+        <label for="pl_${p.id}">管理用の名前（画面には出ません）<input id="pl_${p.id}" type="text" value="${esc(p.label)}"></label>
+        <label for="pc_${p.id}">当選人数<input id="pc_${p.id}" type="number" min="1" inputmode="numeric" value="${p.count}"></label>
+        <label for="pn_${p.id}" class="wide">商品名（画面に大きく表示・抽選前から表示）<input id="pn_${p.id}" type="text" value="${esc(p.name)}"></label>
+        <label for="pp_${p.id}">抽選者（任意）<input id="pp_${p.id}" type="text" placeholder="例：代表取締役社長" value="${esc(p.presenter||"")}"></label>
+        <label for="pfx_${p.id}">演出（豪華・敗者復活＝カウントダウン＋全画面発表）<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
+        <label for="pbd_${p.id}">番号の全画面表示<select id="pbd_${p.id}">${boardOptions(p.board)}</select></label>
+      </div>
+      <div class="imgCell">
+        ${im?`<img class="thumb" src="${im}" alt="${esc(p.name)}" data-label="${esc(p.label)}" data-name="${esc(p.name)}" title="押すと大きく表示">`:`<span class="note">${p.img?"写真を読み込み中…":"写真なし"}</span>`}
+        <label class="btn small fileBtn" for="pimg_${p.id}">写真を選ぶ<input id="pimg_${p.id}" type="file" accept="image/*" data-id="${p.id}"></label>
+        ${im?`<button class="btn small" type="button" data-del="${p.id}">写真を外す</button>`:""}
+      </div>
+    </div>`}).join("");
+  renderPlans();
+  $("addTier").disabled=locked;$("presetBtn").disabled=locked;$("importBtn").disabled=locked||importing;
+  $("tierNote").textContent=locked?"抽選を始めた後は賞の追加・削除・並べ替えはできません。途中で増やすときは抽選画面の「追加抽選」を使ってください":`現在 ${n}賞（何賞でも追加できます）`;
+}
+const plans=()=>S.extras.filter(q=>q.planned);
+function renderPlans(){
+  const list=plans();
+  $("planRows").innerHTML=list.map(p=>{const im=getImg(p.id);return `
+    <div class="prizeBlock tierRev">
+      <div class="pbHead"><span class="dot"></span><span class="note">追加抽選（未使用）</span>
+        <span class="pbTools"><button class="btn small" type="button" data-rmplan="${p.id}">削除</button></span></div>
+      <div class="pbGrid">
+        <label for="pl_${p.id}">管理用の名前（画面には出ません）<input id="pl_${p.id}" type="text" value="${esc(p.label)}"></label>
+        <label for="pc_${p.id}">当選人数<input id="pc_${p.id}" type="number" min="1" inputmode="numeric" value="${p.count}"></label>
+        <label for="pn_${p.id}" class="wide">商品名（画面に大きく表示・抽選前から表示）<input id="pn_${p.id}" type="text" value="${esc(p.name)}"></label>
+        <label for="pp_${p.id}">抽選者（任意）<input id="pp_${p.id}" type="text" placeholder="例：COO" value="${esc(p.presenter||"")}"></label>
+        <label for="pfx_${p.id}">演出<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
+        <label for="pbd_${p.id}">番号の全画面表示<select id="pbd_${p.id}">${boardOptions(p.board)}</select></label>
+      </div>
+      <div class="imgCell">
+        ${im?`<img class="thumb" src="${im}" alt="${esc(p.name)}" data-label="${esc(p.label)}" data-name="${esc(p.name)}" title="押すと大きく表示">`:`<span class="note">${p.img?"写真を読み込み中…":"写真なし"}</span>`}
+        <label class="btn small fileBtn" for="pimg_${p.id}">写真を選ぶ<input id="pimg_${p.id}" type="file" accept="image/*" data-id="${p.id}"></label>
+        ${im?`<button class="btn small" type="button" data-del="${p.id}">写真を外す</button>`:""}
+      </div>
+    </div>`}).join("")||`<p class="note">まだありません。</p>`;
+}
+$("addPlan").onclick=()=>{readForm();const id=uid();
+  S.extras.push({id,label:"敗者復活賞",name:"",count:1,presenter:"",fx:"revival",board:"on",only:[],planned:true});
+  save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
+function readForm(){
+  plans().forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
+    p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
+    p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd").value;});
+  S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
+    p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
+    p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd")?g("pbd").value:(p.board==="off"?"off":"on");});
+  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();
+}
+$("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
+  const d=b.dataset,id=d.up||d.down||d.rm||d.del,i=posOf(id);
+  if(d.up&&i>0)[S.prizes[i-1],S.prizes[i]]=[S.prizes[i],S.prizes[i-1]];
+  else if(d.down&&i<S.prizes.length-1)[S.prizes[i+1],S.prizes[i]]=[S.prizes[i],S.prizes[i+1]];
+  else if(d.rm&&!anyDrawn())S.prizes.splice(i,1);
+  else if(d.del){setImg(id,"");const q=prizeOf(id);if(q)q.img=false;Sync.delImg(id);}
+  if(!anyDrawn()){S.order=drawOrder();S.idx=0}
+  save();renderSetup();});
+$("planRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
+  const d=b.dataset;
+  if(d.rmplan){const i=S.extras.findIndex(q=>q.id===d.rmplan&&q.planned);if(i>=0){S.extras.splice(i,1);setImg(d.rmplan,"");Sync.delImg(d.rmplan);}}
+  else if(d.del){setImg(d.del,"");const q=prizeOf(d.del);if(q)q.img=false;Sync.delImg(d.del);}
+  save();renderSetup();});
+async function onPhotoInput(e){const inp=e.target;if(inp.type!=="file")return;const f=inp.files[0];if(!f)return;readForm();
+  const id=inp.dataset.id;let d;
+  try{d=await resizeFile(f);if(!setImg(id,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
+  catch(err){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
+  renderSetup();$("setupMsg").textContent="写真を共有サーバーに保存中…";
+  try{await Sync.putImg(id,d);const q=prizeOf(id);if(q){q.img=true;save();}$("setupMsg").textContent="写真を保存しました。他の端末でも表示されます。";}
+  catch(err){msg("写真をサーバーに保存できませんでした。この端末には表示されます。通信状態を確認して、もう一度選び直してください。");}}
+$("prizeRows").addEventListener("change",onPhotoInput);
+$("planRows").addEventListener("change",onPhotoInput);
+$("addTier").onclick=()=>{if(anyDrawn())return;readForm();
+  const id=uid();S.prizes.push({id,label:`${S.prizes.length+1}等`,name:"",count:10,presenter:"",fx:"normal"});
+  S.order=drawOrder();S.idx=0;save();renderSetup();const el=$("pl_"+id);if(el){el.focus();el.select();}};
+let presetArmed=null,importArmed=null,importing=false;
+const IMPORT_LABEL="元のシステムから設定と写真を取り込む";
+$("importBtn").onclick=async()=>{if(anyDrawn()||importing)return;const b=$("importBtn"),m=$("setupMsg");
+  if(!importArmed){b.textContent="もう一度押すと、今の設定を元のシステムの内容で置き換えます";b.classList.add("danger");
+    importArmed=setTimeout(()=>{importArmed=null;b.textContent=IMPORT_LABEL;b.classList.remove("danger")},4000);return}
+  clearTimeout(importArmed);importArmed=null;b.classList.remove("danger");
+  importing=true;b.disabled=true;b.textContent="取り込み中…";m.textContent="元のシステムの設定を読み込み中…（サーバーが眠っていると最大1分かかります）";
+  const get=async(path,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||60000);
+    try{const r=await fetch(API_BASE+path,{cache:"no-store",signal:c.signal});if(!r.ok)throw new Error("サーバーエラー "+r.status);return await r.json()}finally{clearTimeout(t)}};
+  try{
+    const j=await get("/api/state");
+    if(!j.state||!Array.isArray(j.state.prizes)||!j.state.prizes.length)throw new Error("元のシステムに設定が保存されていません");
+    const src=migrate(JSON.parse(JSON.stringify(j.state)));
+    const keep=q=>({id:q.id,label:q.label,name:q.name||"",count:q.count,presenter:q.presenter||"",fx:q.fx,board:q.board||"on",img:!!q.img});
+    S.prizes=src.prizes.map(keep);
+    S.extras=(src.extras||[]).filter(q=>q.planned).map(q=>({...keep(q),only:[],planned:true}));
+    S.max=src.max;S.exclude=typeof src.exclude==="string"?src.exclude:"";
+    S.results={};S.started=false;S.order=drawOrder();S.idx=0;save();renderSetup();
+    const withImg=[...S.prizes,...S.extras].filter(q=>q.img);let ok=0,ng=0;
+    for(const q of withImg){m.textContent=`写真を取り込み中… ${ok+ng+1}/${withImg.length}`;
+      try{const d=(await get("/api/img/"+q.id,30000)).data;try{localStorage.setItem(IMGKEY(q.id),d)}catch(e){}
+        await Sync.putImg(q.id,d);ok++;}catch(e){ng++;}}
+    renderSetup();
+    m.textContent=`元のシステムから ${S.prizes.length}賞${S.extras.length?"・追加抽選の準備 "+S.extras.length+"件":""}・写真 ${ok}枚を取り込みました。`+(ng?`（写真 ${ng}枚は取り込めませんでした。設定画面で選び直してください）`:"")+"賞名は画面に出ないので、商品名の欄を確認してください。";
+  }catch(e){m.textContent="取り込めませんでした："+((e&&e.name==="AbortError")?"時間切れ（もう一度押してください）":(e&&e.message)||"通信できません");}
+  finally{importing=false;b.textContent=IMPORT_LABEL;renderSetup();}
+};
+$("presetBtn").onclick=()=>{if(anyDrawn())return;const b=$("presetBtn");
+  if(!presetArmed){b.textContent="もう一度押すと今の賞の設定を置き換えます";b.classList.add("danger");
+    presetArmed=setTimeout(()=>{presetArmed=null;b.textContent=PRESET_LABEL;b.classList.remove("danger")},4000);return}
+  clearTimeout(presetArmed);presetArmed=null;b.textContent=PRESET_LABEL;b.classList.remove("danger");
+  readForm();S.prizes=PRESET.map(p=>({...p,id:uid(),presenter:""}));S.order=drawOrder();S.idx=0;save();renderSetup();
+  $("setupMsg").textContent=`推奨プラン（${S.prizes.length}賞・計${S.prizes.reduce((a,p)=>a+p.count,0)}名）を読み込みました。抽選者や景品名は自由に書き換えられます。`;};
+$("startBtn").onclick=()=>{readForm();
+  if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
+  const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
+  if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
+  if(!anyDrawn()){S.order=drawOrder();S.idx=0;}
+  S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
+};
+function msg(t){$("setupMsg").innerHTML=`<span class="err">${esc(t)}</span>`}
+
+/* ---------- main ---------- */
+function showMain(){
+  $("setup").hidden=true;$("main").hidden=false;$("stage").hidden=false;$("log").hidden=false;
+  renderRail();renderLog();prepareStage();
+}
+function renderRail(){
+  const cur=S.order[S.idx];
+  $("rail").innerHTML=S.order.map(id=>{const p=prizeOf(id);if(!p)return "";const done=!!S.results[id];
+    return `<div class="tier ${id===cur?"now":""} ${done?"done":""}"><span class="t rank ${tierCls(id)}">${esc(T(p))}</span><span class="p">${p.count}名${done?"・抽選済み":""}</span></div>`}).join("");
+}
+const lastGrand=()=>S.order.filter(id=>S.results[id]&&prizeOf(id)&&isBig(prizeOf(id).fx)).at(-1);
+function setReplay(id){const b=$("replayBtn");b.hidden=!id;if(id){b.dataset.id=id;b.textContent=`${T(prizeOf(id))}の発表をもう一度`}}
+function prepareStage(){
+  const id=S.order[S.idx];
+  $("extraPanel").hidden=true;
+  if(id===undefined){ // finished
+    $("presenter").textContent="";
+    $("rank").className="rank tier1";$("rank").textContent="抽選終了";$("rank").style.fontSize="";
+    $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
+    $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());setBoard(false);$("boardBtn").hidden=true;$("stagePhotoBtn").hidden=true;$("sumBtn").hidden=!anyDrawn();Summary.refresh();updateNav();return;
+  }
+  const p=prizeOf(id);
+  $("stagePhotoBtn").hidden=posOf(id)>=0; // 追加抽選のときだけ、その場で写真を選べる
+  $("presenter").textContent=p.presenter?`抽選者　${p.presenter}`:"";
+  $("rank").className="rank "+tierCls(id);$("rank").textContent=T(p);rankSize($("rank"),T(p));
+  $("prize").className="prize";$("prize").textContent="";
+  showPhoto(id,false);
+  $("sub").textContent=`${p.count}名を一度に抽選します（対象 ${pool(p).length}名${p.only&&p.only.length?"・指定の番号のみ":""}）`;
+  const c=p.count,size=c<=2?"clamp(3rem,14vw,6rem)":c<=5?"clamp(2.2rem,9vw,4rem)":c<=15?"clamp(1.4rem,5vw,2.4rem)":c<=30?"clamp(1.2rem,4vw,2rem)":"clamp(1rem,3.2vw,1.6rem)";
+  $("balls").style.setProperty("--bs",size);$("balls").dataset.base=size;
+  $("balls").innerHTML=Array.from({length:c},()=>`<div class="ball"><span class="bn">${"-".repeat(digits())}</span></div>`).join("");
+  boardOff=false;setBoard(wantBoard(p));
+  $("drawBtn").hidden=false;$("drawBtn").disabled=false;$("nextBtn").hidden=true;setReplay(null);$("sumBtn").hidden=true;
+  if(S.results[id])showWinners(id,false);
+  updateNav();
+}
+/* ---------- 全画面ボード ---------- */
+const BOARD_MIN=15; // これより人数が多い賞は全画面で番号を大きく表示
+let boardOff=false;
+function wantBoard(p){return p.board!=="off";} // 標準はすべての賞で全画面
+function setBoard(on){
+  const st=$("stage"),has=$("balls").children.length>0;
+  on=on&&!boardOff&&has;st.classList.toggle("board",on);document.body.classList.toggle("noscroll",on);
+  $("boardBtn").hidden=!has;$("boardBtn").textContent=on?"通常の表示に戻す":"全画面で表示";
+  requestAnimationFrame(fitBalls);
+}
+function fitBalls(){
+  const box=$("balls");if(!box.children.length)return;
+  if(!$("stage").classList.contains("board")){if(box.dataset.base)box.style.setProperty("--bs",box.dataset.base);return}
+  // 枠に収まる最大の文字サイズを二分探索で求める
+  let lo=10,hi=Math.min(240,box.clientHeight*0.5);
+  for(let i=0;i<12;i++){const mid=(lo+hi)/2;box.style.setProperty("--bs",mid+"px");
+    if(box.scrollHeight<=box.clientHeight+1&&box.scrollWidth<=box.clientWidth+1)lo=mid;else hi=mid;}
+  box.style.setProperty("--bs",Math.floor(lo)+"px");
+}
+$("boardBtn").onclick=()=>{const on=!$("stage").classList.contains("board");boardOff=!on;setBoard(on);if(!on)$("stage").scrollIntoView({block:"start"});};
+addEventListener("resize",()=>requestAnimationFrame(fitBalls));
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+
+let spinning=false;
+$("drawBtn").onclick=()=>{
+  if(spinning)return;const id=S.order[S.idx],p=prizeOf(id);
+  const cand=pool(p);if(cand.length<p.count){$("sub").textContent=`抽選対象が足りません（対象 ${cand.length}名）。`;return;}
+  spinning=true;$("drawBtn").disabled=true;$("extraBtn").disabled=true;$("extraPanel").hidden=true;updateNav();
+  if(isBig(p.fx))countdown(p,()=>spin(id,p,cand));else spin(id,p,cand);
+};
+function countdown(p,done){
+  const el=$("countdown");let n=3;el.hidden=false;el.classList.toggle("revive",p.fx==="revival");
+  const tick=()=>{if(n===0){el.hidden=true;el.innerHTML="";done();return}
+    el.innerHTML=`${p.fx==="revival"?`<div class="cdEyebrow">REVIVAL ― 敗者復活</div>`:""}<div class="cdLabel">${esc(T(p))}</div><span class="cdNum">${n}</span>${p.presenter?`<div class="cdPres">抽選者　${esc(p.presenter)}</div>`:""}`;
+    Music.count(n,p.fx);n--;setTimeout(tick,1000)};
+  tick();
+}
+function spin(id,p,cand){
+  const winners=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);
+  const balls=[...$("balls").children],cls=tierCls(id),grand=isBig(p.fx),revive=p.fx==="revival";
+  const dur=grand?16000:p.fx==="mid"?8000:(p.count>30?6000:4500),t0=performance.now();
+  // 豪華演出で2名のとき: 1人目は中盤で確定、2人目は最後まで引っぱる
+  const stopAt=(grand&&balls.length===2)?[dur*0.5,dur]:balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
+  Music.start(p.fx,dur/1000);
+  if(grand){$("stage").classList.add("suspense");$("stage").classList.toggle("revive",revive);$("sub").textContent=revive?`よみがえるのは誰だ…！ ${T(p)} 抽選中`:`運命の${T(p)}、抽選中…`;}
+  else $("sub").textContent=`${T(p)} 抽選中…`;
+  let last=0,stopped=0;
+  function frame(t){
+    const el=t-t0;let interval;
+    if(grand){const next=stopAt.find(x=>x>el)??dur,prev=stopAt.filter(x=>x<=el).pop()||0;
+      const k=Math.min(1,(el-prev)/Math.max(1,next-prev));interval=50+Math.pow(k,3)*480;}
+    else interval=60+Math.min(el/dur,1)*120;
+    if(t-last>interval){last=t;
+      balls.forEach((b,i)=>{if(el<stopAt[i])b.firstChild.textContent=fmt(cand[Math.floor(Math.random()*cand.length)]);});}
+    balls.forEach((b,i)=>{if(el>=stopAt[i]&&!b.classList.contains("win")){
+      b.firstChild.textContent=fmt(winners[i]);b.classList.add("win",cls);stopped++;Music.ding(p.fx);
+      if(grand&&stopped<balls.length)$("sub").textContent=`残り${balls.length-stopped}名…！`;}});
+    if(el<dur)requestAnimationFrame(frame);else finish();
+  }
+  function finish(){
+    Music.stop();Music.fanfare(p.fx);
+    S.results[id]=winners;save();
+    const after=()=>{$("stage").classList.remove("suspense","revive");spinning=false;$("extraBtn").disabled=false;showWinners(id,true);renderRail();renderLog();};
+    if(grand){$("sub").textContent=revive?`${T(p)} 復活決定！`:`${T(p)} 決定！`;setTimeout(()=>{after();Grand.show(id,winners);},1650);}
+    else after();
+  }
+  requestAnimationFrame(frame);
+}
+$("replayBtn").onclick=()=>{const id=$("replayBtn").dataset.id;if(id&&S.results[id]){Music.fanfare(prizeOf(id).fx);setTimeout(()=>Grand.show(id,S.results[id]),1650);}};
+function showPhoto(id,anim){const p=prizeOf(id),cls=tierCls(id),src=imgSrc(id);
+  if(src){$("reveal").innerHTML=`<img class="prizeImg ${cls}" alt="${esc(T(p))}" data-label="" data-name="${esc(T(p))}" title="押すと大きく表示"><div class="zoomHint">写真を押すと大きく表示</div>`;const im=$("reveal").querySelector("img");
+    im.onerror=()=>{$("reveal").innerHTML="";fitBalls()};im.onload=()=>fitBalls();im.src=src;if(!anim)im.style.animation="none";}
+  else $("reveal").innerHTML="";}
+function showWinners(id,anim){
+  const p=prizeOf(id),cls=tierCls(id),balls=[...$("balls").children];
+  S.results[id].forEach((n,i)=>{const b=balls[i];if(!b)return;b.firstChild.textContent=fmt(n);b.classList.add("win",cls);if(!anim)b.style.animation="none";});
+  $("prize").textContent="";$("prize").classList.remove("show");
+  if(!$("reveal").querySelector("img"))showPhoto(id,false);
+  requestAnimationFrame(fitBalls);
+  if(anim)Sparkle.burst();
+  $("sub").textContent=`当選おめでとうございます！`;
+  $("drawBtn").hidden=true;$("nextBtn").hidden=false;setReplay(isBig(p.fx)?id:null);
+  const nx=prizeOf(S.order[S.idx+1]);
+  $("nextBtn").textContent=nx?`次へ（${T(nx)}）`:"抽選を終える";
+  updateNav();
+}
+$("stagePhotoFile").onchange=async()=>{const f=$("stagePhotoFile").files[0];$("stagePhotoFile").value="";if(!f)return;
+  const id=S.order[S.idx];if(!id)return;let d;
+  try{d=await resizeFile(f);}catch(e){$("sub").textContent="この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。";return;}
+  await attachPhoto(id,d,$("sub"));showPhoto(id,false);if(S.results[id])showWinners(id,false);};
+function updateNav(){const id=S.order[S.idx];
+  $("prevBtn").hidden=spinning||S.idx<=0;
+  $("redoBtn").hidden=spinning||!id||!S.results[id];
+  if(!$("prevBtn").hidden){const pv=prizeOf(S.order[S.idx-1]);$("prevBtn").textContent=pv?`◀ 前の賞へ（${T(pv)}）`:"◀ 前の賞へ";}}
+$("prevBtn").onclick=()=>{if(spinning||S.idx<=0)return;Grand.hide();S.idx--;save();renderRail();prepareStage();};
+let redoArmed=null;
+$("redoBtn").onclick=()=>{const id=S.order[S.idx];if(spinning||!id||!S.results[id])return;const b=$("redoBtn");
+  if(!redoArmed){b.textContent="もう一度押すと、この賞の結果を消して引き直します";b.classList.add("danger");
+    redoArmed=setTimeout(()=>{redoArmed=null;b.textContent="この賞を引き直す";b.classList.remove("danger")},4000);return}
+  clearTimeout(redoArmed);redoArmed=null;b.textContent="この賞を引き直す";b.classList.remove("danger");
+  delete S.results[id];save();renderRail();renderLog();prepareStage();
+  $("sub").textContent=`${T(prizeOf(id))}の結果を取り消しました。もう一度「ルーレット スタート」を押してください。`;};
+$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();if(S.order[S.idx]===undefined&&anyDrawn())Summary.show();};
+
+/* ---------- 追加抽選（敗者復活など） ---------- */
+$("exFx").innerHTML=fxOptions("revival");$("exBoard").innerHTML=boardOptions("on");
+let exPhoto=""; // 追加抽選に付ける写真（data URL）
+function exPhotoUI(){
+  $("exThumb").innerHTML=exPhoto?`<img class="thumb" src="${exPhoto}" alt="追加抽選の景品写真" title="押すと大きく表示">`:`<span class="note">写真なし</span>`;
+  $("exNoPhoto").hidden=!exPhoto;
+  const withImg=[...S.prizes,...S.extras].filter(q=>getImg(q.id));
+  $("exCopy").innerHTML=`<option value="">他の賞の写真を使う…</option>`+withImg.map(q=>`<option value="${q.id}">${esc(q.label)}${q.name?"（"+esc(q.name)+"）":""}の写真</option>`).join("");
+  $("exCopy").hidden=!withImg.length;
+}
+$("exFile").onchange=async()=>{const f=$("exFile").files[0];if(!f)return;
+  try{exPhoto=await resizeFile(f);}catch(e){$("exMsg").innerHTML=`<span class="err">この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。</span>`;}
+  $("exFile").value="";exPhotoUI();};
+$("exCopy").onchange=()=>{const id=$("exCopy").value;if(id){exPhoto=getImg(id);exPhotoUI();}};
+$("exNoPhoto").onclick=()=>{exPhoto="";exPhotoUI();};
+async function attachPhoto(id,data,msgEl){ // 写真をこの端末と共有サーバーに保存
+  if(!setImg(id,data)){if(msgEl)msgEl.innerHTML=`<span class="err">写真を保存できませんでした。小さめの写真でお試しください。</span>`;return false}
+  try{await Sync.putImg(id,data);const q=prizeOf(id);if(q){q.img=true;save();}return true}
+  catch(e){if(msgEl)msgEl.innerHTML=`<span class="err">写真を共有サーバーに保存できませんでした。この端末には表示されます。</span>`;return false}
+}
+let exPlanId="";
+function exPlanUI(){const list=plans();$("exPlanWrap").hidden=!list.length;
+  $("exPlan").innerHTML=`<option value="">使わない（ここで新しく入力する）</option>`+list.map(q=>`<option value="${q.id}">${esc(q.label)}${q.name?"（"+esc(q.name)+"）":""}・${q.count}名</option>`).join("");
+  $("exPlan").value=list.some(q=>q.id===exPlanId)?exPlanId:"";}
+$("exPlan").onchange=()=>{exPlanId=$("exPlan").value;const q=prizeOf(exPlanId);if(!q)return;
+  $("exLabel").value=q.label;$("exName").value=q.name||"";$("exCount").value=q.count;$("exPres").value=q.presenter||"";
+  $("exFx").value=q.fx||"revival";$("exBoard").value=q.board==="off"?"off":"on";exPhoto=getImg(q.id)||"";exPhotoUI();
+  $("exMsg").textContent="準備した内容を読み込みました。対象の番号を入れて「この抽選を次に行う」を押してください。";$("exOnly").focus();};
+$("extraBtn").onclick=()=>{if(spinning)return;const pn=$("extraPanel");pn.hidden=!pn.hidden;
+  if(!pn.hidden){exPlanUI();if(!exPlanId&&plans().length){exPlanId=plans()[0].id;$("exPlan").value=exPlanId;$("exPlan").onchange();}exPhotoUI();$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切りで入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
+$("exCancel").onclick=()=>{$("extraPanel").hidden=true;requestAnimationFrame(fitBalls)};
+$("exGo").onclick=()=>{if(spinning)return;
+  const count=Math.max(1,parseInt($("exCount").value,10)||1),only=[...parseNums($("exOnly").value)];
+  const planned=prizeOf(exPlanId);
+  const fields={label:$("exLabel").value.trim()||"追加抽選",name:$("exName").value.trim(),count,presenter:$("exPres").value.trim(),fx:$("exFx").value,board:$("exBoard").value,only};
+  const p=planned&&planned.planned?Object.assign(planned,fields):Object.assign({id:uid()},fields);
+  const avail=pool(p).length;
+  if(avail<count){$("exMsg").innerHTML=`<span class="err">対象が${avail}名しかいません（当選済み・欠席の番号は除かれます）。人数か対象の番号を見直してください。</span>`;return;}
+  const photo=exPhoto,isPlan=!!p.planned;
+  if(isPlan){delete p.planned;}else S.extras.push(p);
+  if(photo&&photo!==getImg(p.id)){p.img=true;attachPhoto(p.id,photo,$("exMsg"));}
+  exPhoto="";exPlanId="";const cur=S.order[S.idx];
+  if(cur===undefined||!S.results[cur])S.order.splice(S.idx,0,p.id);else{S.order.splice(S.idx+1,0,p.id);S.idx++;}
+  save();renderRail();renderLog();prepareStage();
+  $("exOnly").value="";$("stage").scrollIntoView({behavior:"smooth",block:"start"});
+};
+
+/* ---------- log ---------- */
+function renderLog(){
+  const rows=S.order.filter(id=>S.results[id]).map(id=>{const p=prizeOf(id);
+    return `<div class="logRow"><div class="h"><b class="rank ${tierCls(id)}">${esc(T(p))}</b><span class="note">${S.results[id].length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</span></div><div class="nums">${S.results[id].map(n=>fmt(n)).join("、")}</div></div>`});
+  const first=prizeOf(S.order[0]);
+  $("logRows").innerHTML=rows.join("")||`<p class="note">まだ当選者はいません。${first?esc(T(first)):""}から順に抽選します。</p>`;
+  $("copyBtn").hidden=!rows.length;$("sumBtn2").hidden=!rows.length;$("copyBox").hidden=true;Summary.refresh();
+}
+$("copyBtn").onclick=async()=>{
+  const lines=["賞名\t景品\t番号"];
+  S.order.filter(id=>S.results[id]).forEach(id=>{const p=prizeOf(id);S.results[id].forEach(n=>lines.push([p.label,p.name||"",fmt(n)].join("\t")))});
+  const t=lines.join("\n"),b=$("copyBtn"),box=$("copyBox");
+  try{await navigator.clipboard.writeText(t);box.hidden=true;b.textContent="コピーしました";setTimeout(()=>{b.textContent="結果をコピー"},2000);}
+  catch(e){box.hidden=false;box.value=t;box.focus();box.select();b.textContent="下の枠を長押ししてコピーしてください";}
+};
+
+$("setupBtn").onclick=()=>{ if(spinning)return;
+  const drawn=anyDrawn(),opening=$("setup").hidden;
+  if(!opening&&!S.started)return; // 開始前は設定画面を閉じない
+  $("setup").hidden=!opening;
+  if(opening){boardOff=true;setBoard(false);}
+  $("setupBtn").textContent=opening&&S.started?"設定を閉じる":"設定";
+  if(opening){
+    renderSetup();
+    $("startBtn").textContent=drawn?"設定を保存して戻る":"この設定で開始";
+    $("setupMsg").textContent=drawn?"抽選済みの結果はそのまま残ります。景品名・人数・抽選者・演出の修正や、最大番号の変更ができます。":"受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。";
+    $("setup").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+};
+let resetArmed=null;
+$("resetBtn").onclick=()=>{
+  if(spinning)return;
+  const b=$("resetBtn");
+  if(!resetArmed){
+    b.textContent="もう一度押すと結果を消します";b.classList.add("danger");
+    resetArmed=setTimeout(()=>{resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");},4000);
+    return;
+  }
+  clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
+  Music.stop();Grand.hide();Summary.hide();$("stage").classList.remove("suspense");setBoard(false);
+  S.results={};S.extras=[];S.order=drawOrder();S.idx=0;S.started=false;save();
+  $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
+  $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";$("setupBtn").textContent="設定";
+  $("setupMsg").textContent="結果を消しました。設定を確認して開始してください。";
+  renderSetup();window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* ---------- sound (Web Audio, no files) ---------- */
+const Music=(()=>{
+  let ctx,on=true,loop=null,master,bus=null;
+  function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.4;
+    const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);}
+    if(ctx.state==="suspended")ctx.resume();return ctx}
+  function note(f,t,d,type="square",v=.15,dst){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.02)}
+  function noise(t,d,v=.12,freq=5000,ftype="highpass",dst){const c=ac(),b=c.createBuffer(1,Math.max(1,c.sampleRate*d|0),c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
+    const s=c.createBufferSource(),g=c.createGain(),h=c.createBiquadFilter();h.type=ftype;h.frequency.value=freq;s.buffer=b;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(h);h.connect(g);g.connect(dst||master);s.start(t)}
+  function brass(fs,t,d,v=.05,dst){const c=ac(),vv=v/Math.sqrt(fs.length);fs.forEach(f=>[-7,0,7].forEach(det=>{const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
+    o.type="sawtooth";o.frequency.value=f;o.detune.value=det;lp.type="lowpass";lp.frequency.setValueAtTime(700,t);lp.frequency.linearRampToValueAtTime(3400,t+.07);lp.frequency.exponentialRampToValueAtTime(1500,t+d);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vv,t+.035);g.gain.setValueAtTime(vv,t+d*.75);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(lp);lp.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.05)}))}
+  function timp(f,t,v=.6,dst){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";o.frequency.setValueAtTime(f*1.4,t);o.frequency.exponentialRampToValueAtTime(f,t+.08);
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+1.3);o.connect(g);g.connect(dst||master);o.start(t);o.stop(t+1.4);noise(t,.15,v*.3,400,"lowpass",dst)}
+  function crash(t,v=.3,d=3,dst){noise(t,d,v,3000,"highpass",dst)}
+  function pad(fs,t,d,v=.02,dst){const c=ac();fs.forEach(f=>[-9,9].forEach(det=>{const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
+    o.type="sawtooth";o.frequency.value=f;o.detune.value=det;lp.type="lowpass";lp.frequency.value=1500;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.4);g.gain.setValueAtTime(v,t+Math.max(.5,d-.2));g.gain.exponentialRampToValueAtTime(.0001,t+d+.25);
+    o.connect(lp);lp.connect(g);g.connect(dst||master);o.start(t);o.stop(t+d+.3)}))}
+  function newBus(){const c=ac();bus=c.createGain();bus.gain.value=1;bus.connect(master);return bus}
+
+  // 通常・やや豪華: 軽快なゲームショー風ループ
+  const bass=[110,110,147,147,131,131,165,165], arp=[440,554,659,880,659,554,494,587,740,587,523,659,784,659,587,494];
+  function startLoop(mid){const c=ac(),b=newBus();const step=60/(mid?132:150)/2;let n=0,next=c.currentTime+.05;
+    loop=setInterval(()=>{while(next<c.currentTime+.2){
+      if(n%2===0)note(bass[(n/2|0)%8],next,step*1.8,"triangle",.3,b);
+      note(arp[n%16],next,step*.8,"square",.06,b);
+      noise(next,.04,n%4===2?.15:.06,5000,"highpass",b);
+      if(mid&&n%8===0)timp(110,next,.35,b);
+      n++;next+=step;}},50);}
+
+  // 豪華: ドラムロール＋ティンパニ＋盛り上がる弦（だんだん大きく、速く）
+  function grandRoll(sec){const c=ac(),b=newBus(),t0=c.currentTime+.05;
+    b.gain.setValueAtTime(.5,t0);b.gain.linearRampToValueAtTime(1.15,t0+sec);
+    for(let t=0;t<sec;t+=.055)noise(t0+t,.05,.04+.08*(t/sec),1800,"highpass",b);
+    let t=0;while(t<sec){timp(Math.floor(t)%2?55:73.4,t0+t,.5,b);t+=Math.max(.3,1-.7*(t/sec));}
+    const prog=[[220,261.6,329.6,440],[174.6,220,261.6,349.2],[196,246.9,293.7,392],[164.8,207.7,246.9,329.6]];
+    const len=2;let i=0;for(let s=0;s<sec-.2;s+=len,i++){const lift=i>=4?2:1;pad(prog[i%4].map(f=>f*(i>=4&&i%4!==3?1:1)),t0+s,Math.min(len,sec-s),.018*lift,b);}
+    // 最後の数秒で上昇するうなり
+    const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain(),ts=t0+Math.max(0,sec-5);
+    o.type="sawtooth";o.frequency.setValueAtTime(110,ts);o.frequency.exponentialRampToValueAtTime(880,t0+sec);lp.type="lowpass";lp.frequency.value=2000;
+    g.gain.setValueAtTime(.0001,ts);g.gain.exponentialRampToValueAtTime(.05,t0+sec);o.connect(lp);lp.connect(g);g.connect(b);o.start(ts);o.stop(t0+sec+.1);
+  }
+  // 敗者復活: 心臓の鼓動（ドクン…ドクン）＋せり上がる短調の和音＋上昇するうなり
+  function revivalRoll(sec){const c=ac(),b=newBus(),t0=c.currentTime+.05;
+    b.gain.setValueAtTime(.55,t0);b.gain.linearRampToValueAtTime(1.2,t0+sec);
+    let t=0;while(t<sec){const k=t/sec;timp(49,t0+t,.75,b);timp(49,t0+t+.22,.45,b);t+=Math.max(.42,1.25-.85*k);}
+    const base=[146.8,174.6,220]; // Dm
+    const len=2;for(let s=0,i=0;s<sec-.2;s+=len,i++){const up=Math.pow(2,i/12);pad(base.map(f=>f*up),t0+s,Math.min(len,sec-s),.02+.004*i,b);}
+    for(let x=0;x<sec;x+=.09)noise(t0+x,.08,.015+.06*(x/sec),900+3000*(x/sec),"bandpass",b);
+    const o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain(),ts=t0+Math.max(0,sec-6);
+    o.type="sawtooth";o.frequency.setValueAtTime(73.4,ts);o.frequency.exponentialRampToValueAtTime(1174.7,t0+sec);lp.type="lowpass";lp.frequency.value=2400;
+    g.gain.setValueAtTime(.0001,ts);g.gain.exponentialRampToValueAtTime(.06,t0+sec);o.connect(lp);lp.connect(g);g.connect(b);o.start(ts);o.stop(t0+sec+.1);
+  }
+  function gong(t,v=.5){const c=ac();[65.4,98.1,131.5,174.6].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type="sine";o.frequency.setValueAtTime(f*1.01,t);o.frequency.exponentialRampToValueAtTime(f,t+.4);
+      g.gain.setValueAtTime(v/(i+1.5),t);g.gain.exponentialRampToValueAtTime(.0001,t+4.5);o.connect(g);g.connect(master);o.start(t);o.stop(t+4.6)});
+    noise(t,3.5,v*.35,400,"bandpass");}
+  // 不死鳥のファンファーレ（D長調、4度で駆け上がる）
+  function revivalFanfare(){const c=ac(),t=c.currentTime+.05;
+    gong(t,.6);
+    [[.35,[293.7],.18],[.55,[392],.18],[.75,[587.3],.35],[1.15,[293.7,370,440,587.3],.28],[1.5,[329.6,415.3,493.9,659.3],.28],
+     [1.85,[146.8,293.7,370,440,587.3,740,880],3.6]].forEach(([d,fs,l])=>brass(fs,t+d,l,.06));
+    timp(73.4,t+1.15,.7);timp(82.4,t+1.5,.7);for(let i=0;i<6;i++)timp(73.4,t+1.55+i*.05,.2+i*.06);timp(36.7,t+1.85,1.1);crash(t+1.85,.45,4);
+    [1174.7,1480,1760,2349.3,2960,3520].forEach((f,i)=>note(f,t+1.95+i*.06,1.4,"sine",.08));
+    gong(t+3.6,.35);[[3.7,[293.7,370,440,587.3,740]],[4.1,[146.8,293.7,440,587.3,880,1174.7]]].forEach(([d,fs],k)=>brass(fs,t+d,k?3:.35,.05));
+  }
+  function grandFanfare(){const c=ac(),t=c.currentTime+.05;
+    [[0,[329.6,659.3],.11],[.13,[329.6,659.3],.11],[.26,[329.6,659.3],.11],[.4,[220,277.2,329.6,440],.55],
+     [1.0,[246.9,329.6,415.3,493.9],.3],[1.33,[277.2,370,440,554.4],.3],[1.7,[110,220,277.2,329.6,440,554.4,659.3],3.4]]
+     .forEach(([d,fs,l])=>brass(fs,t+d,l,.06));
+    timp(110,t+.4,.7);for(let i=0;i<8;i++)timp(110,t+1.02+i*.08,.2+i*.05);timp(55,t+1.7,1);crash(t+1.7,.4,3.8);
+    [880,1108.7,1318.5,1760,2217.5,2637].forEach((f,i)=>note(f,t+1.8+i*.07,1.3,"sine",.09));
+    [[3.4,[220,277.2,329.6,440,554.4]],[3.75,[246.9,329.6,415.3,493.9]],[4.1,[220,277.2,329.6,440,554.4,659.3,880]]]
+      .forEach(([d,fs],k)=>brass(fs,t+d,k===2?3:.3,.05));
+    timp(55,t+4.1,.9);crash(t+4.1,.3,3.5);
+    [1318.5,1760,2217.5,2637,3520].forEach((f,i)=>note(f,t+4.2+i*.06,1.2,"sine",.06));
+  }
+  return{
+    start(fx,sec){if(!on)return;try{fx==="grand"?grandRoll(sec):fx==="revival"?revivalRoll(sec):startLoop(fx==="mid")}catch(e){}},
+    count(n,fx){if(!on)return;try{const t=ac().currentTime;if(fx==="revival"){timp(49,t,1);timp(49,t+.2,.6);if(n===1)gong(t+.02,.4);return;}timp(n===1?110:82.4,t,.9);noise(t,.6,.12,2500,"highpass");if(n===1)crash(t+.02,.2,1.2);}catch(e){}},
+    stop(){clearInterval(loop);loop=null;if(bus&&ctx){const b=bus,n=ctx.currentTime;b.gain.cancelScheduledValues(n);b.gain.setValueAtTime(b.gain.value,n);b.gain.linearRampToValueAtTime(0,n+.12);setTimeout(()=>{try{b.disconnect()}catch(e){}},400);}bus=null},
+    ding(fx){if(!on)return;try{const t=ac().currentTime;
+      if(fx==="revival"){gong(t,.45);brass([146.8,220,293.7],t,.7,.05);}
+      else if(fx==="grand"){timp(55,t,1);crash(t,.35,2.5);brass([220,277.2,329.6,440],t,.6,.05);}
+      else{note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}}catch(e){}},
+    fanfare(fx){if(!on)return;try{if(fx==="grand"){grandFanfare();return}if(fx==="revival"){revivalFanfare();return}const t=ac().currentTime+.05;
+      const seq=fx==="mid"?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
+      seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(fx==="mid")crash(t+.5,.2,1.5);}catch(e){}},
+    toggle(){on=!on;if(!on)this.stop();return on},
+    unlock(){try{ac()}catch(e){}}
+  };
+})();
+$("soundBtn").onclick=()=>{const on=Music.toggle();$("soundBtn").textContent=on?"🔊 音あり":"🔇 音なし";if(on)Music.unlock();};
+document.addEventListener("pointerdown",()=>Music.unlock(),{once:true});
+
+/* ---------- sparkles behind the title ---------- */
+const Sparkle=(()=>{
+  const cv=$("sparkles"),cx=cv.getContext("2d");let W,H,pts=[],extra=0;
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function size(){const r=cv.parentElement.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)}
+  function mk(){return{x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+1,p:Math.random()*6.28,v:Math.random()*.03+.01}}
+  function star(x,y,s,a){cx.globalAlpha=a;cx.fillStyle="#ffe7a0";cx.beginPath();cx.moveTo(x,y-s*3);cx.lineTo(x+s*.7,y-s*.7);cx.lineTo(x+s*3,y);cx.lineTo(x+s*.7,y+s*.7);cx.lineTo(x,y+s*3);cx.lineTo(x-s*.7,y+s*.7);cx.lineTo(x-s*3,y);cx.lineTo(x-s*.7,y-s*.7);cx.fill()}
+  function loop(){cx.clearRect(0,0,W,H);const n=26+Math.round(extra);while(pts.length<n)pts.push(mk());if(pts.length>n)pts.length=n;
+    pts.forEach(q=>{q.p+=q.v*(extra?3:1);const a=Math.max(0,Math.sin(q.p));if(a<.02&&Math.random()<.05)Object.assign(q,mk());star(q.x,q.y,q.s,a*.9)});
+    if(extra>0)extra=Math.max(0,extra-.3);if(!still)requestAnimationFrame(loop)}
+  addEventListener("resize",size);size();loop();
+  return{burst(){extra=60}};
+})();
+
+/* ---------- 豪華演出の全画面発表 ---------- */
+const Grand=(()=>{
+  const el=$("grand"),cv=$("confetti"),cx=cv.getContext("2d");let run=false,P=[],W=0,H=0;
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const cols=["#f2c14e","#fff3c4","#e4573d","#ffffff","#d9a33a","#46c2b0"],ember=["#ff6a3d","#ffb347","#ffd27a","#ff3b2f","#fff0c2"];let mode="gold";
+  function size(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)}
+  function mkEmber(){return{x:Math.random()*W,y:H+20+Math.random()*H*.6,s:1.5+Math.random()*3.5,vy:-(1.2+Math.random()*2.6),sw:Math.random()*6.28,a:.5+Math.random()*.5,c:ember[Math.random()*ember.length|0]}}
+  function mk(){if(mode==="ember")return mkEmber();return{x:Math.random()*W,y:-20-Math.random()*H,w:6+Math.random()*8,h:10+Math.random()*10,vy:2+Math.random()*3,vx:-1+Math.random()*2,r:Math.random()*6.28,vr:-.2+Math.random()*.4,c:cols[Math.random()*cols.length|0],sw:Math.random()*6.28}}
+  function loop(){if(!run)return;cx.clearRect(0,0,W,H);
+    if(mode==="ember"){cx.globalCompositeOperation="lighter";P.forEach(p=>{p.y+=p.vy;p.sw+=.04;p.x+=Math.sin(p.sw)*.9;if(p.y<-20)Object.assign(p,mkEmber(),{y:H+10});
+        const fade=Math.min(1,Math.max(0,p.y/H));cx.globalAlpha=p.a*(.25+.75*fade);cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,p.s,0,6.283);cx.fill()});
+      cx.globalAlpha=1;cx.globalCompositeOperation="source-over";requestAnimationFrame(loop);return;}
+    P.forEach(p=>{p.y+=p.vy;p.sw+=.05;p.x+=p.vx+Math.sin(p.sw)*.8;p.r+=p.vr;if(p.y>H+20){Object.assign(p,mk());p.y=-20;}
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.w/2,-p.h/2,p.w,p.h*Math.abs(Math.cos(p.sw))+1);cx.restore()});
+    requestAnimationFrame(loop)}
+  function show(id,nums){const p=prizeOf(id),len=[...T(p)].length,rv=p.fx==="revival";
+    mode=rv?"ember":"gold";el.classList.toggle("revive",rv);$("gTitle").textContent=rv?"復活当選":"大当たり";
+    el.querySelector(".g-eyebrow").textContent=rv?"REVIVAL ― 敗者復活":"EPデータウィーブ 発足記念イベント 抽選会";
+    const gr=$("gRank");gr.textContent=T(p);gr.style.fontSize=len<=2?"":`min(${Math.floor(86/len)}vw,${Math.max(3,Math.round(26/len*10)/10)}rem)`;
+    $("gPres").textContent=p.presenter?`抽選者　${p.presenter}`:"";el.setAttribute("aria-label",`${T(p)} 当選発表`);
+    $("gNums").innerHTML=nums.map((n,i)=>`<div class="g-num" style="animation-delay:${(.9+i*.4).toFixed(2)}s">${fmt(n)}</div>`).join("");
+    $("gPrize").textContent="";
+    const src=imgSrc(id);$("gImg").innerHTML="";
+    if(src){$("gImg").innerHTML=`<img class="g-img" alt="${esc(T(p))}" data-label="" data-name="${esc(T(p))}" title="押すと大きく表示">`;const im=$("gImg").querySelector("img");im.onerror=()=>{$("gImg").innerHTML="";fitGrand()};im.onload=()=>fitGrand();im.src=src;}
+    el.hidden=false;el.scrollTop=0;el.classList.remove("go");void el.offsetWidth;el.classList.add("go");fitGrand();
+    if(!still){size();P=Array.from({length:Math.min(rv?320:240,Math.round(W*H/(rv?3200:4500)))},mk);if(rv)P.forEach(q=>q.y=Math.random()*H*1.4);if(!run){run=true;loop()}}}
+  function fitGrand(){ // 画面に収まらないときは全体を縮小
+    const inner=el.querySelector(".grandInner");inner.style.zoom="";
+    const avail=el.clientHeight-parseFloat(getComputedStyle(el).paddingTop)-parseFloat(getComputedStyle(el).paddingBottom);
+    const need=inner.scrollHeight;if(need>avail)inner.style.zoom=String(Math.max(.4,avail/need));}
+  addEventListener("resize",()=>{if(!el.hidden)fitGrand()});
+  function hide(){el.hidden=true;run=false;cx.clearRect(0,0,W,H)}
+  $("grandClose").onclick=hide;
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&!el.hidden)hide()});
+  addEventListener("resize",()=>{if(run)size()});
+  return{show,hide};
+})();
+
+/* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
+const PAGE_VERSION="商品名版 10/28-1";
+// Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
+const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
+const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function refreshAll(){
+  const setupOpen=!$("setup").hidden;
+  if(S.started){showMain();if(setupOpen){$("setup").hidden=false;renderSetup();$("setupBtn").textContent="設定を閉じる";}}
+  else{$("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;renderSetup();$("setupBtn").textContent="設定";}
+}
+const Sync=(()=>{
+  const el=$("syncStatus");
+  let rev=parseInt(lsGet(REVKEY)||"0",10)||0,dirty=lsGet(DIRTYKEY)==="1",ver=0,timer=null,busy=false,reached=false,first=true,imgsChecked=false,choosing=false;
+  const hadLocal=lsGet(KEY)!==null; // この端末で以前に設定したことがあるか
+  let serverRev=null,lastOk=null,lastErr="";
+  const status=(kind,text)=>{el.dataset.kind=kind;el.textContent=text;info();};
+  const hhmmss=d=>d?d.toLocaleTimeString("ja-JP",{hour12:false}):"—";
+  function info(){const b=$("shareInfo");if(!b)return;
+    b.textContent=`共有サーバー：${serverRev===null?"未接続":"接続OK（第"+serverRev+"版）"}　この端末：第${rev}版${dirty?"・未送信の変更あり":""}　最終確認 ${hhmmss(lastOk)}${lastErr?"　エラー："+lastErr:""}　ページ ${PAGE_VERSION}`;}
+  const errText=e=>e&&e.name==="AbortError"?"時間切れ（サーバー起動中の可能性）":(e&&e.message)||"通信できません";
+  async function call(path,opt={},ms=70000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+    try{return await fetch(API_BASE+path.replace("/api/","/api/ns/shohin/"),{...opt,signal:c.signal,cache:"no-store",headers:opt.body?{"Content-Type":"application/json"}:{}})}finally{clearTimeout(t)}}
+  const markDirty=v=>{dirty=v;lsSet(DIRTYKEY,v?"1":"0")};
+  const setRev=r=>{rev=r;lsSet(REVKEY,String(r))};
+  function canAdopt(){if(spinning)return false;const a=document.activeElement;
+    return !(a&&a.closest&&a.closest("#setup,#extraPanel")&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
+  function adopt(state,r){S=migrate(state);setRev(r);markDirty(false);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}refreshAll();fetchImgs();}
+  function schedule(){ver++;markDirty(true);if(choosing)return;status("wait","保存待ち…");clearTimeout(timer);timer=setTimeout(push,700);}
+  async function push(){
+    clearTimeout(timer);
+    if(busy){timer=setTimeout(push,400);return}
+    busy=true;status("wait","保存中…");const sent=ver;
+    try{
+      const r=await call("/api/state",{method:"POST",body:JSON.stringify({rev,state:S})});
+      const j=await r.json().catch(()=>({}));
+      if(r.status===409){
+        if(j.state){adopt(j.state,j.rev);status("warn","他の端末の変更を読み込みました");setTimeout(()=>{if(!dirty)status("ok","共有中")},4000);}
+        else{setRev(j.rev||0);busy=false;await push();return}
+      }else if(r.ok){setRev(j.rev);serverRev=j.rev;lastOk=new Date();lastErr="";reached=true;markDirty(ver!==sent);status(dirty?"wait":"ok",dirty?"保存待ち…":"共有中（保存済み）");if(dirty)timer=setTimeout(push,300);}
+      else throw new Error((j&&j.error)||("サーバーエラー "+r.status));
+    }catch(e){reached=false;lastErr=errText(e);status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
+    finally{busy=false}
+  }
+  const sig=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));return JSON.stringify([m.prizes.map(p=>[p.label,p.name,p.count,p.presenter,p.fx,p.board==="off"?"off":"on"]),m.max,m.exclude,m.results,m.extras,m.started])}catch(e){return ""}};
+  const summary=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));const done=Object.keys(m.results||{}).length;
+    return `${m.prizes.map(p=>T(p)).join("・")}／最大番号 ${m.max}${done?`／抽選済み ${done}賞`:""}`}catch(e){return ""}};
+  function askChoice(j){
+    choosing=true;status("warn","どちらの設定を使うか選んでください");
+    $("syncChoiceInfo").textContent=`この端末：${summary(S)}　｜　共有サーバー：${summary(j.state)}`;
+    $("syncChoice").hidden=false;$("syncChoice").scrollIntoView({behavior:"smooth",block:"start"});
+    $("useLocal").onclick=()=>{$("syncChoice").hidden=true;choosing=false;setRev(j.rev);ver++;markDirty(true);push();};
+    $("useServer").onclick=()=>{$("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);status("ok","共有中");};
+  }
+  async function pull(){
+    if(busy||choosing||document.hidden)return;
+    if(!reached)status("wait",first?"サーバーに接続中…（起動に最大1分）":"再接続中…");
+    busy=true;let next=null;
+    try{
+      const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);
+      const j=await r.json();reached=true;serverRev=j.rev;lastOk=new Date();lastErr="";
+      if(j.state&&j.rev>rev){
+        // この端末で一度も共有していない設定があり、内容が違うときは、どちらを使うか選んでもらう
+        if(rev===0&&(hadLocal||dirty)&&sig(S)!==sig(j.state))askChoice(j);
+        else if(canAdopt()){const had=dirty;adopt(j.state,j.rev);if(had)status("warn","他の端末の変更を読み込みました");}}
+      else if(j.rev<rev){setRev(j.rev);next=push;}      // サーバー側のデータが消えていた → この端末の内容で作り直す
+      else if(dirty||(!j.state&&hadLocal))next=push;     // 未送信の変更、または設定済みの最初の1台
+      if(!dirty&&!next&&!choosing&&el.dataset.kind!=="warn")status("ok","共有中");
+    }catch(e){reached=false;lastErr=errText(e);status("off","サーバーに接続できません（この端末に保存中）");}
+    finally{busy=false;first=false;info();}
+    if(next)await next();
+    if(reached&&!imgsChecked){imgsChecked=true;uploadLocalImgs();}
+  }
+  async function fetchImgs(){let got=false;
+    for(const p of [...S.prizes,...S.extras]){if(p.img&&!getImg(p.id)){try{const r=await call("/api/img/"+p.id,{},30000);if(r.ok){const j=await r.json();try{localStorage.setItem(IMGKEY(p.id),j.data);got=true}catch(e){}}}catch(e){}}}
+    if(got&&!spinning)refreshAll();}
+  async function uploadLocalImgs(){ // この端末にだけある写真をサーバーへ
+    for(const p of [...S.prizes,...S.extras]){const d=getImg(p.id);if(d&&!p.img){try{await putImg(p.id,d);p.img=true;save();}catch(e){}}}}
+  async function putImg(id,data){const r=await call("/api/img/"+id,{method:"PUT",body:JSON.stringify({data})});if(!r.ok)throw new Error(r.status)}
+  async function delImg(id){try{await call("/api/img/"+id,{method:"DELETE"})}catch(e){}}
+  async function sendNow(m){ // この端末の内容でサーバーを上書き（＝全端末に反映）
+    if(spinning)return false;m=m||$("shareMsg");m.textContent="反映中…（サーバーが眠っていると最大1分かかります）";
+    try{const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);const j=await r.json();
+      serverRev=j.rev;setRev(j.rev);ver++;markDirty(true);$("syncChoice").hidden=true;choosing=false;await push();
+      if(dirty){m.innerHTML=`<span class="err">反映できませんでした：${esc(lastErr||"通信できません")}。もう一度押してください。</span>`;return false}
+      m.textContent=`全端末に反映しました（第${rev}版・${hhmmss(new Date())}）。他の端末は数秒で切り替わります。`;return true;}
+    catch(e){lastErr=errText(e);info();m.innerHTML=`<span class="err">反映できませんでした：${esc(lastErr)}</span>`;return false}}
+  async function loadNow(){ // サーバーの内容でこの端末を上書き
+    if(spinning)return;const m=$("shareMsg");m.textContent="読み込み中…（サーバーが眠っていると最大1分かかります）";
+    try{const r=await call("/api/state");if(!r.ok)throw new Error("サーバーエラー "+r.status);const j=await r.json();
+      serverRev=j.rev;lastOk=new Date();
+      if(!j.state){m.textContent="共有サーバーにはまだ設定がありません。設定した端末で「送る」を押してください。";info();return;}
+      $("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);$("setup").hidden=false;renderSetup();status("ok","共有中");
+      $("shareMsg").textContent=`共有サーバーの設定（第${j.rev}版）を読み込みました。`;}
+    catch(e){lastErr=errText(e);info();m.textContent="読み込めませんでした："+lastErr;}}
+  $("applyBtn").onclick=async()=>{
+    if(spinning)return;readForm();
+    const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
+    if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
+    const b=$("applyBtn");b.disabled=true;b.textContent="反映中…";
+    await sendNow($("setupMsg"));
+    b.disabled=false;b.textContent="設定を全端末に反映する";};
+  $("loadNow").onclick=()=>loadNow();
+  el.onclick=()=>{first=false;pull();};
+  syncHook=schedule;
+  return {pull,putImg,delImg,fetchImgs,info,sendNow};
+})();
+
+/* ---------- 結果一覧 ---------- */
+const Summary=(()=>{
+  const el=$("summary"),grid=$("sumGrid");
+  function render(){
+    const ids=S.order.filter(id=>S.results[id]&&prizeOf(id)).slice().reverse(); // 格上の賞から
+    const total=ids.reduce((a,id)=>a+S.results[id].length,0);
+    const n=ids.length,cols=n<=2?n:(n<=4?2:(innerWidth>innerHeight?3:2));
+    grid.style.setProperty("--cols",Math.max(1,cols));
+    grid.innerHTML=ids.map(id=>{const p=prizeOf(id),cls=tierCls(id),nums=S.results[id],src=imgSrc(id);
+      const w=nums.length>12?"wall":"";
+      return `<div class="sumCard ${cls} ${w}">
+        ${src?`<img class="sumImg" src="${esc(src)}" alt="${esc(T(p))}" data-label="" data-name="${esc(T(p))}" title="押すと大きく表示">`:""}
+        <div class="sumBody"><div class="sumLabel">${esc(T(p))}<small>${nums.length}名${p.presenter?"・抽選者 "+esc(p.presenter):""}</small></div>
+        
+        <div class="sumNums">${nums.map(x=>`<span>${fmt(x)}</span>`).join("")}</div></div></div>`}).join("")
+      ||`<p class="note">まだ当選者はいません。</p>`;
+    grid.querySelectorAll("img").forEach(im=>{im.onerror=()=>{im.remove();fit()};im.onload=()=>fit();});
+    $("sumClose").title=`当選 計${total}名`;
+  }
+  function fit(){ // 1画面に収まる最大の文字サイズ
+    if(el.hidden)return;let lo=6,hi=40;
+    for(let i=0;i<12;i++){const mid=(lo+hi)/2;el.style.setProperty("--u",mid+"px");
+      if(grid.scrollHeight<=grid.clientHeight+1&&grid.scrollWidth<=grid.clientWidth+1)lo=mid;else hi=mid;}
+    el.style.setProperty("--u",Math.floor(lo*10)/10+"px");
+  }
+  function show(){render();el.hidden=false;document.body.classList.add("noscroll");requestAnimationFrame(fit);$("sumClose").focus({preventScroll:true});}
+  function hide(){el.hidden=true;if(!$("stage").classList.contains("board"))document.body.classList.remove("noscroll");}
+  $("sumClose").onclick=hide;
+  addEventListener("resize",()=>{if(!el.hidden){render();requestAnimationFrame(fit)}});
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&!el.hidden&&$("photoView").hidden)hide()});
+  return{show,hide,isOpen:()=>!el.hidden,refresh:()=>{if(!el.hidden){render();requestAnimationFrame(fit)}}};
+})();
+$("sumBtn").onclick=()=>Summary.show();
+$("sumBtn2").onclick=()=>Summary.show();
+
+/* ---------- 写真の拡大表示 ---------- */
+function openPhoto(img){
+  $("photoImg").src=img.currentSrc||img.src;$("photoImg").alt=img.alt||"";
+  $("pvLabel").textContent=img.dataset.label||"";$("pvName").textContent=img.dataset.name||"";
+  $("photoView").hidden=false;$("photoClose").focus({preventScroll:true});
+}
+function closePhoto(){$("photoView").hidden=true;$("photoImg").removeAttribute("src");}
+document.addEventListener("click",e=>{const img=e.target.closest&&e.target.closest("img.prizeImg,img.g-img,img.thumb,img.sumImg");
+  if(img&&img.src){e.preventDefault();e.stopPropagation();openPhoto(img);}});
+$("photoView").addEventListener("click",closePhoto);
+addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("photoView").hidden){e.stopImmediatePropagation();closePhoto();}},true);
+
+/* ---------- boot ---------- */
+renderSetup();
+if(S.started)showMain();
+Sync.pull();
+setInterval(()=>Sync.pull(),4000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)Sync.pull()});
+</script>
+</body>
+</html>
