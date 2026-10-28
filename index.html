@@ -283,18 +283,20 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
   font-size:clamp(1rem,3.2vh,2.2rem);letter-spacing:.3em;padding-left:.3em;display:flex;align-items:center;gap:.8em;white-space:nowrap;max-width:100%}
 .sbEyebrow::before,.sbEyebrow::after{content:"";width:clamp(20px,8vw,120px);height:2px;background:linear-gradient(90deg,transparent,var(--gold))}
 .sbEyebrow::after{transform:scaleX(-1)}
-.sbTitle{font-family:var(--display);font-size:clamp(3rem,min(20vw,26vh),15rem);line-height:1.05;letter-spacing:.14em;padding-left:.14em;
+.sbTitle{font-family:var(--display);font-size:clamp(3rem,min(18vw,21vh),13rem);line-height:1.05;letter-spacing:.14em;padding-left:.14em;
   background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite;
   filter:drop-shadow(0 5px 0 #6b4a12) drop-shadow(0 0 34px rgba(242,193,78,.45))}
 .sbRule{font-size:clamp(.75rem,1.8vh,1.1rem);letter-spacing:.5em;padding-left:.5em;color:#cfc6e8}
 .sbSoon{display:grid;gap:.2em;justify-items:center}
-.sbSoon .big{font-family:var(--display);font-size:clamp(1.4rem,5vh,3.4rem);color:#fff;letter-spacing:.12em;animation:sbPulse 2.4s ease-in-out infinite}
-.sbSoon .cd{font-family:var(--num);font-weight:700;font-size:clamp(1.6rem,7vh,4.6rem);color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
-.sbSoon .at{font-size:clamp(.9rem,2.4vh,1.5rem);color:#d8d0ee;letter-spacing:.1em}
+.sbSoon .big{font-family:var(--display);font-size:clamp(1.8rem,7vh,4.6rem);color:#fff;letter-spacing:.12em;animation:sbPulse 2.4s ease-in-out infinite}
+.sbSoon .cd{font-family:var(--num);font-weight:700;font-size:clamp(2.6rem,12vh,8rem);color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
+.sbSoon .at{font-family:var(--display);font-size:clamp(1.3rem,4.6vh,3rem);color:#fff;letter-spacing:.1em;line-height:1.2}
+.sbSoon .at .tm{font-family:var(--num);font-weight:700;color:var(--gold);font-size:1.7em;letter-spacing:.02em;margin-right:.25em;font-variant-numeric:tabular-nums}
+.sbSoon .at.small{font-size:clamp(1rem,3.2vh,2rem);color:#d8d0ee}
 @keyframes sbPulse{50%{opacity:.55}}
 .sbNote{font-size:clamp(1rem,3vh,1.8rem);letter-spacing:.12em;color:#fff;padding:.3em 1.2em;border-top:1px solid rgba(242,193,78,.45);border-bottom:1px solid rgba(242,193,78,.45)}
-.sbClock{position:absolute;right:clamp(12px,2vw,28px);top:clamp(10px,2vh,24px);font-family:var(--num);font-weight:700;font-size:clamp(1rem,2.6vh,1.6rem);color:#cfc6e8;font-variant-numeric:tabular-nums}
+.sbClock{position:absolute;right:clamp(12px,2vw,28px);top:clamp(10px,2vh,24px);font-family:var(--num);font-weight:700;font-size:clamp(1.2rem,3.6vh,2.4rem);color:#cfc6e8;font-variant-numeric:tabular-nums}
 #sbClose{position:absolute;left:clamp(10px,2vw,24px);top:clamp(10px,2vh,20px);opacity:.25;transition:opacity .3s}
 #sbClose:hover,#sbClose:focus-visible{opacity:1}
 @media (max-width:700px){.sbEyebrow{font-size:clamp(.7rem,3.4vw,1.1rem);letter-spacing:.06em;gap:.4em;padding-left:.06em}.sbEyebrow::before,.sbEyebrow::after{width:clamp(8px,3vw,24px)}.sbClock{display:none}}
@@ -1138,7 +1140,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/28-7";
+const PAGE_VERSION="10/28-8";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1310,9 +1312,9 @@ const Standby=(()=>{
     const m=/^(\d{1,2}):(\d{2})/.exec(S.startAt||"");
     if(!m){box.innerHTML=`<div class="big">まもなく開始します</div>`;return}
     const t=new Date(now);t.setHours(+m[1],+m[2],0,0);const s=Math.ceil((t-now)/1000);
-    if(s<=0){box.innerHTML=`<div class="at">${pad(+m[1])}:${m[2]} 開始</div><div class="big">まもなく開始します</div>`;return}
+    if(s<=0){box.innerHTML=`<div class="at"><span class="tm">${pad(+m[1])}:${m[2]}</span>開始</div><div class="big">まもなく開始します</div>`;return}
     const h=Math.floor(s/3600),mm=Math.floor(s%3600/60),ss=s%60;
-    box.innerHTML=`<div class="at">${pad(+m[1])}:${m[2]} 開始予定</div><div class="cd">${h?`${h}:${pad(mm)}:${pad(ss)}`:`${pad(mm)}:${pad(ss)}`}</div><div class="at">開始まで</div>`;}
+    box.innerHTML=`<div class="at"><span class="tm">${pad(+m[1])}:${m[2]}</span>開始予定</div><div class="at small">開始まで あと</div><div class="cd">${h?`${h}:${pad(mm)}:${pad(ss)}`:`${pad(mm)}:${pad(ss)}`}</div>`;}
   function tick(){soon();}
   function size(){const r=devicePixelRatio||1;cv.width=innerWidth*r;cv.height=innerHeight*r;ctx.setTransform(r,0,0,r,0,0);
     parts=Array.from({length:Math.round(Math.min(110,innerWidth/12))},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:.6+Math.random()*2.2,v:.15+Math.random()*.5,p:Math.random()*6.28}));}

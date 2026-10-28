@@ -277,7 +277,7 @@ def del_img(img_id, ns=""):
 
 # ---------- 2台運用（映す画面＋リモコン） ----------
 # リモコンの操作命令と、映す画面の状態をメモリに置く（保存はしない。再起動で消えてよい）
-ACTIONS = {"draw", "next", "prev", "redo", "grandClose", "replay", "standby", "summary",
+ACTIONS = {"reset", "draw", "next", "prev", "redo", "grandClose", "replay", "standby", "summary",
            "board", "photo", "extra", "start", "sound"}
 remote_lock = threading.Lock()
 remotes = {}  # 保存先ごと: {"seq", "cmds", "screen", "ts"}
