@@ -301,7 +301,14 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 @media (prefers-reduced-motion:reduce){#standby::before,.sbTitle,.sbSoon .big{animation:none}}
 /* ---------- 2台運用（映す画面＋リモコン） ---------- */
 body.remoteMode .wrap{display:none}
-#remote{max-width:560px;margin:0 auto;display:grid;gap:12px}
+/* リモコンでは裏で動く抽選画面の全画面表示（スクロール禁止）を効かせない */
+html:has(body.remoteMode),body.remoteMode,body.remoteMode.noscroll{overflow:auto!important;height:auto}
+#remote{max-width:560px;margin:0 auto;display:grid;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 170px)}
+.rmBar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;gap:6px;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(18,16,28,.97);border-top:1px solid var(--line);box-shadow:0 -10px 24px rgba(0,0,0,.5);}
+.rmBar>*{max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
+#rmMain{font-size:1.45rem;padding:20px 16px;min-height:72px;touch-action:manipulation}
+.rmHint{margin:0;text-align:center;font-size:.85rem;color:var(--fg)}
+#remote .btn{touch-action:manipulation}
 .rmTop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .rmTop b{font-family:var(--display);font-weight:400;font-size:1.3rem;color:var(--gold)}
 .rmConn{font-size:.85rem;color:var(--muted);display:inline-flex;gap:6px;align-items:center;min-width:0}
@@ -314,7 +321,7 @@ body.remoteMode .wrap{display:none}
 .rmTitle{font-family:var(--display);font-size:clamp(1.4rem,6vw,2rem);color:var(--gold);line-height:1.2;overflow-wrap:anywhere}
 .rmSub{font-size:.9rem;color:var(--muted)}
 .rmPrize{font-weight:700}
-.rmPhoto img{max-width:100%;max-height:26vh;border-radius:10px}
+.rmPhoto img{max-width:100%;max-height:15vh;border-radius:10px}
 .rmWin{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .rmWin span{font-family:var(--num);font-weight:700;background:var(--gold);color:#241a00;border-radius:6px;padding:2px 8px}
 .rmBig{width:100%;font-size:1.3rem;padding:18px}
@@ -541,9 +548,10 @@ body.screenMode #log{display:none}
     <div class="rmSub" id="rmSub"></div>
   </div>
   <p class="rmMsg" id="rmMsg" aria-live="polite"></p>
+  <div hidden><!-- 画面下の大きなボタン（rmMain）がこの3つの役目をまとめて担う -->
   <button class="btn apply rmBig" id="rmStart" type="button" hidden>抽選画面を開始する</button>
   <button class="btn primary rmBig" id="rmDraw" type="button">ルーレット スタート</button>
-  <button class="btn rmBig" id="rmNext" type="button">次へ</button>
+  <button class="btn rmBig" id="rmNext" type="button">次へ</button></div>
   <div class="rmGrid">
     <button class="btn" id="rmPrev" type="button">◀ 前の賞へ</button>
     <button class="btn" id="rmGrand" type="button">発表画面を閉じる</button>
@@ -566,6 +574,7 @@ body.screenMode #log{display:none}
   <button class="btn small" id="rmRedo" type="button">この賞を引き直す</button>
   <button class="btn small" id="rmReset" type="button">最初からやり直す（全結果を消す）</button>
   <p class="note">設定の変更は <a href="?">通常の画面</a> で行います（変更は数秒で映す画面にも反映されます）。</p>
+  <div class="rmBar"><p class="rmHint" id="rmHint"></p><button class="btn rmBig" id="rmMain" type="button" disabled>…</button></div>
 </section>
 <div id="screenGate" hidden>
   <div>
@@ -1129,7 +1138,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/28-4";
+const PAGE_VERSION="10/28-6";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1393,21 +1402,23 @@ const Duo=(()=>{
     screenLoop();}
 
   /* ===== リモコン ===== */
-  let st=null,age=null,sent=0,redoArm=null,resetArm=null;
+  let st=null,age=null,sent=0,sentAt=0,redoArm=null,resetArm=null;
   const msg=(t,pend)=>{const m=$("rmMsg");m.textContent=t;m.classList.toggle("pend",!!pend)};
   async function send(action,arg){
-    try{const j=await post("/api/cmd",{action,arg});sent=j.seq;msg("映す画面に送りました…",true);setTimeout(pull,250);}
-    catch(e){msg("送れませんでした："+((e&&e.name==="AbortError")?"時間切れ":e.message));}}
+    sentAt=Date.now();sent=-1;if(st)render();try{const j=await post("/api/cmd",{action,arg});sent=j.seq;sentAt=Date.now();msg("映す画面に送りました…",true);setTimeout(pull,250);}
+    catch(e){sent=0;msg("送れませんでした："+((e&&e.name==="AbortError")?"時間切れ":e.message));if(st)render();}}
   async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;render();}
     catch(e){conn("off","サーバーに接続できません（起動に最大1分）");}}
   const conn=(k,t)=>{const c=$("rmConn");c.dataset.kind=k;c.textContent=t};
-  const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset"];
+  const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset","rmMain"];
   function render(){
     const alive=st&&age!=null&&age<6;
     if(!alive){conn("off",st?`映す画面からの応答がありません（${Math.round(age||0)}秒）`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
       BTNS.forEach(b=>$(b).disabled=true);return}
     conn(st.ready?"ok":"warn",st.ready?"映す画面とつながっています":"映す画面で「映す画面として開始」を押してください（音と全画面のため）");
-    if(sent&&st.done>=sent){msg(st.exMsg||"映す画面で実行しました");sent=0;}
+    if(sent===-1&&Date.now()-sentAt>15000)sent=0;
+    if(sent>0&&(st.done>=sent||Date.now()-sentAt>6000)){msg(st.done>=sent?(st.exMsg||"映す画面で実行しました"):"映す画面の反応を待っています…");sent=0;}
+    const pend=!!sent;
     $("rmStart").hidden=!st.setup;$("rmStart").disabled=false;
     $("rmPos").textContent=st.setup?"映す画面は設定画面です":st.n?`${Math.min(st.idx+1,st.n)} / ${st.n} 番目の抽選`:"";
     $("rmTitle").textContent=st.title||"—";$("rmPres").textContent=st.presenter||"";$("rmSub").textContent=st.sub||"";
@@ -1429,8 +1440,21 @@ const Duo=(()=>{
     if(!resetArm)set("rmReset",!st.spinning&&!st.setup);
     const pl=$("rmPlan"),cur=pl.value,opts=`<option value="">新しく入力する</option>`+st.plans.map(q=>`<option value="${esc(q.id)}">${esc(q.t)}・${q.c}名</option>`).join("");
     if(pl.dataset.o!==opts){pl.dataset.o=opts;pl.innerHTML=opts;pl.value=st.plans.some(q=>q.id===cur)?cur:(st.plans[0]?st.plans[0].id:"");pl.onchange();}
+    mainBtn(pend);
+    if(pend)["rmDraw","rmNext","rmPrev","rmRedo","rmReset"].forEach(b=>$(b).disabled=true);
     $("rmRail").innerHTML=st.rail.map(r=>`<div class="${r.cur?"cur":""} ${r.d?"d":""}"><span>${esc(r.t)}</span><span>${r.c}名${r.d?"・済":""}</span></div>`).join("");}
-  function startRemote(){document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
+  let mainAct=null;
+  function mainBtn(pend){const b=$("rmMain"),h=$("rmHint");let t,cls="btn rmBig",act=null,hint="";
+    if(pend){t="送信中…";hint="映す画面に送っています";}
+    else if(st.setup){t="抽選画面を開始する";cls+=" apply";act="start";hint="映す画面は設定画面です";}
+    else if(st.spinning){t="抽選中…";hint="ルーレットが回っています";}
+    else if(st.grand){t="発表画面を閉じる";act="grandClose";hint="当選発表を映しています";}
+    else if(st.canDraw){t="ルーレット スタート";cls+=" primary";act="draw";hint=st.photo?"写真を映しています。押すと写真を閉じて抽選します":"準備ができたら押してください";}
+    else if(st.canNext){t=st.nextLabel||"次へ";cls+=" apply";act="next";hint="この賞は抽選済みです。次の賞へ進みます";}
+    else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint="";}
+    b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;h.textContent=hint;}
+  function startRemote(){
+    $("rmMain").onclick=()=>{if(mainAct)send(mainAct)};document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
     $("rmStart").onclick=()=>send("start");
     $("rmDraw").onclick=()=>send("draw");$("rmNext").onclick=()=>send("next");$("rmPrev").onclick=()=>send("prev");
     $("rmGrand").onclick=()=>send("grandClose");$("rmReplay").onclick=()=>send("replay");
