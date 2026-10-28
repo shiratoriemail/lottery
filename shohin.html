@@ -768,7 +768,7 @@ $("startBtn").onclick=()=>{readForm();
   const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
   if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
   if(!anyDrawn()){S.order=drawOrder();S.idx=0;}
-  S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
+  S.started=true;save();showMain();autoPhoto();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
 };
 function msg(t){$("setupMsg").innerHTML=`<span class="err">${esc(t)}</span>`}
 
@@ -902,7 +902,7 @@ function updateNav(){const id=S.order[S.idx];
   $("prevBtn").hidden=spinning||S.idx<=0;
   $("redoBtn").hidden=spinning||!id||!S.results[id];
   if(!$("prevBtn").hidden){const pv=prizeOf(S.order[S.idx-1]);$("prevBtn").textContent=pv?`◀ 前の賞へ（${T(pv)}）`:"◀ 前の賞へ";}}
-$("prevBtn").onclick=()=>{if(spinning||S.idx<=0)return;Grand.hide();S.idx--;save();renderRail();prepareStage();};
+$("prevBtn").onclick=()=>{if(spinning||S.idx<=0)return;Grand.hide();S.idx--;save();renderRail();prepareStage();autoPhoto();};
 let redoArmed=null;
 $("redoBtn").onclick=()=>{const id=S.order[S.idx];if(spinning||!id||!S.results[id])return;const b=$("redoBtn");
   if(!redoArmed){b.textContent="もう一度押すと、この賞の結果を消して引き直します";b.classList.add("danger");
@@ -910,7 +910,7 @@ $("redoBtn").onclick=()=>{const id=S.order[S.idx];if(spinning||!id||!S.results[i
   clearTimeout(redoArmed);redoArmed=null;b.textContent="この賞を引き直す";b.classList.remove("danger");
   delete S.results[id];save();renderRail();renderLog();prepareStage();
   $("sub").textContent=`${T(prizeOf(id))}の結果を取り消しました。もう一度「ルーレット スタート」を押してください。`;};
-$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();if(S.order[S.idx]===undefined&&anyDrawn())Summary.show();};
+$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();autoPhoto();if(S.order[S.idx]===undefined&&anyDrawn())Summary.show();};
 
 /* ---------- 追加抽選（敗者復活など） ---------- */
 $("exFx").innerHTML=fxOptions("revival");$("exBoard").innerHTML=boardOptions("on");
@@ -1155,7 +1155,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/28-4";
+const PAGE_VERSION="商品名版 10/28-5";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1304,6 +1304,10 @@ function openPhoto(img){
   $("pvLabel").textContent=img.dataset.label||"";$("pvName").textContent=img.dataset.name||"";
   $("photoView").hidden=false;$("photoClose").focus({preventScroll:true});
 }
+function autoPhoto(){const id=S.order[S.idx];if(!id||S.results[id]||spinning)return;
+  const im=$("reveal").querySelector("img");if(!im)return;
+  const go=()=>{if(S.order[S.idx]===id&&!spinning&&!S.results[id]&&im.isConnected&&im.naturalWidth)openPhoto(im)};
+  if(im.complete)go();else im.addEventListener("load",go,{once:true});}
 function closePhoto(){$("photoView").hidden=true;$("photoImg").removeAttribute("src");}
 document.addEventListener("click",e=>{const img=e.target.closest&&e.target.closest("img.prizeImg,img.g-img,img.thumb,img.sumImg");
   if(img&&img.src){e.preventDefault();e.stopPropagation();openPhoto(img);}});
