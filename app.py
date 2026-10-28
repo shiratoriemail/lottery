@@ -14,6 +14,7 @@ import json
 import os
 import re
 import threading
+import time
 
 import requests
 from flask import Flask, jsonify, request, send_from_directory
@@ -190,7 +191,7 @@ def prize_file(n, ext):
 
 @app.get("/api/health")
 def health():
-    return jsonify({"ok": True, "repo": REPO, "branch": BRANCH, "token": bool(TOKEN), "ns": True})
+    return jsonify({"ok": True, "repo": REPO, "branch": BRANCH, "token": bool(TOKEN), "ns": True, "remote": True})
 
 
 @app.get("/api/state")
@@ -272,6 +273,60 @@ def del_img(img_id, ns=""):
             delete_file(img_path(img_id), sha, f"景品写真を削除 {img_id}")
         img_cache.pop(img_path(img_id), None)
         return jsonify({"ok": True})
+
+
+# ---------- 2台運用（映す画面＋リモコン） ----------
+# リモコンの操作命令と、映す画面の状態をメモリに置く（保存はしない。再起動で消えてよい）
+ACTIONS = {"draw", "next", "prev", "redo", "grandClose", "replay", "standby", "summary",
+           "board", "photo", "extra", "start", "sound"}
+remote_lock = threading.Lock()
+remotes = {}  # 保存先ごと: {"seq", "cmds", "screen", "ts"}
+
+
+def remote_of(d):
+    return remotes.setdefault(d, {"seq": 0, "cmds": [], "screen": None, "ts": 0.0})
+
+
+@app.post("/api/cmd")
+@app.post("/api/ns/<ns>/cmd")
+def post_cmd(ns=""):
+    body = request.get_json(silent=True) or {}
+    action = body.get("action")
+    if action not in ACTIONS:
+        return jsonify({"error": "不明な操作です"}), 400
+    d = ns_dir()
+    with remote_lock:
+        r = remote_of(d)
+        r["seq"] += 1
+        r["cmds"].append({"seq": r["seq"], "action": action, "arg": body.get("arg"), "ts": time.time()})
+        r["cmds"] = r["cmds"][-50:]
+        return jsonify({"seq": r["seq"]})
+
+
+@app.post("/api/screen")
+@app.post("/api/ns/<ns>/screen")
+def post_screen(ns=""):
+    """映す画面が状態を送り、まだ実行していない命令を受け取る"""
+    body = request.get_json(silent=True) or {}
+    after = int(body.get("after", -1))
+    d = ns_dir()
+    with remote_lock:
+        r = remote_of(d)
+        r["screen"] = body.get("status")
+        r["ts"] = time.time()
+        # after<0 は映す画面を開いた直後：それまでの命令は実行しない
+        fresh = [c for c in r["cmds"] if c["seq"] > after] if after >= 0 else []
+        return jsonify({"seq": r["seq"], "cmds": fresh})
+
+
+@app.get("/api/screen")
+@app.get("/api/ns/<ns>/screen")
+def get_screen(ns=""):
+    d = ns_dir()
+    with remote_lock:
+        r = remote_of(d)
+        age = time.time() - r["ts"] if r["ts"] else None
+        return jsonify({"seq": r["seq"], "status": r["screen"], "age": age})
 
 
 if __name__ == "__main__":
