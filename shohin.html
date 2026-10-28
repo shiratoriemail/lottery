@@ -1168,7 +1168,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/28-8";
+const PAGE_VERSION="商品名版 10/28-9";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1341,10 +1341,10 @@ const Standby=(()=>{
   const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const pad=n=>String(n).padStart(2,"0");
   function soon(){const now=new Date(),box=$("sbSoon");$("sbClock").textContent=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const m=/^(\d{1,2}):(\d{2})$/.exec(S.startAt||"");
+    const m=/^(\d{1,2}):(\d{2})/.exec(S.startAt||"");
     if(!m){box.innerHTML=`<div class="big">まもなく開始します</div>`;return}
     const t=new Date(now);t.setHours(+m[1],+m[2],0,0);const s=Math.ceil((t-now)/1000);
-    if(s<=0){box.innerHTML=`<div class="big">まもなく開始します</div>`;return}
+    if(s<=0){box.innerHTML=`<div class="at">${pad(+m[1])}:${m[2]} 開始</div><div class="big">まもなく開始します</div>`;return}
     const h=Math.floor(s/3600),mm=Math.floor(s%3600/60),ss=s%60;
     box.innerHTML=`<div class="at">${pad(+m[1])}:${m[2]} 開始予定</div><div class="cd">${h?`${h}:${pad(mm)}:${pad(ss)}`:`${pad(mm)}:${pad(ss)}`}</div><div class="at">開始まで</div>`;}
   function tick(){soon();}
@@ -1369,6 +1369,7 @@ const Standby=(()=>{
   document.addEventListener("visibilitychange",async()=>{if(!el.hidden&&document.visibilityState==="visible"&&navigator.wakeLock){try{lock=await navigator.wakeLock.request("screen")}catch(e){}}});
   return {show,hide};
 })();
+$("startAt").addEventListener("change",()=>{readForm();$("setupMsg").textContent=$("startAt").value?`開始予定時刻 ${$("startAt").value} を保存しました。待ち受け画面に表示されます。`:"開始予定時刻を消しました。";});
 $("standbyBtn").onclick=()=>{readFormIfOpen();Standby.show();};
 $("standbyBtn2").onclick=()=>{readForm();Standby.show();};
 /* ---------- 2台運用（映す画面＋リモコン） ---------- */
