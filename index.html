@@ -750,8 +750,9 @@ $("startBtn").onclick=()=>{readForm();
   if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
   const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
   if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
-  if(!anyDrawn()){S.order=drawOrder();S.idx=0;}
+  const first=!anyDrawn();if(first){S.order=drawOrder();S.idx=0;}
   S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
+  if(first&&ROLE!=="screen")Standby.show(); // 開始したら、まず待ち受け画面を映す
 };
 function msg(t){$("setupMsg").innerHTML=`<span class="err">${esc(t)}</span>`}
 
@@ -1140,7 +1141,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/28-8";
+const PAGE_VERSION="10/28-9";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1380,7 +1381,8 @@ const Duo=(()=>{
       case "redo":if(spinning||!vis("redoBtn"))break;Grand.hide();$("redoBtn").click();$("redoBtn").click();break;
       case "grandClose":Grand.hide();break;
       case "replay":click("replayBtn");break;
-      case "standby":arg?Standby.show():Standby.hide();break;
+      case "standby":if(arg){Standby.show();break}Standby.hide();
+        if(vis("setup")&&!S.started)click("startBtn");else if(typeof autoPhoto==="function")autoPhoto();break;
       case "summary":if(arg){if(anyDrawn()&&!spinning)Summary.show()}else Summary.hide();break;
       case "board":if(!spinning)click("boardBtn");break;
       case "photo":if(arg){const im=$("reveal").querySelector("img");if(im)openPhoto(im)}else closePhoto();break;
@@ -1388,7 +1390,7 @@ const Duo=(()=>{
       case "extra":runExtra(arg||{});break;
       case "reset":if(spinning)break;Music.stop();Grand.hide();Summary.hide();Standby.hide();closePhoto();$("stage").classList.remove("suspense","revive");
         clearDraw();S.started=true;save();$("setupBtn").textContent="設定";showMain();if(typeof autoPhoto==="function")autoPhoto();
-        exMsg="最初からやり直しました。1番目の抽選から始められます。";break;}
+        Standby.show();exMsg="最初からやり直しました。待ち受け画面を映しています。";break;}
     done=c.seq;}
   async function screenLoop(){
     try{const j=await post("/api/screen",{status:status(),after});
@@ -1399,7 +1401,7 @@ const Duo=(()=>{
     if(ran){try{await post("/api/screen",{status:status(),after})}catch(e){}}
     setTimeout(screenLoop,ran?400:700);}
   function startScreen(){document.body.classList.add("screenMode");$("screenGate").hidden=false;$("screenDot").hidden=false;
-    $("gateGo").onclick=async()=>{Music.unlock();ready=true;$("screenGate").hidden=true;
+    $("gateGo").onclick=async()=>{Music.unlock();ready=true;$("screenGate").hidden=true;Standby.show();
       try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
       try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}};
     screenLoop();}
@@ -1446,18 +1448,19 @@ const Duo=(()=>{
     mainBtn(pend);
     if(pend)["rmDraw","rmNext","rmPrev","rmRedo","rmReset"].forEach(b=>$(b).disabled=true);
     $("rmRail").innerHTML=st.rail.map(r=>`<div class="${r.cur?"cur":""} ${r.d?"d":""}"><span>${esc(r.t)}</span><span>${r.c}名${r.d?"・済":""}</span></div>`).join("");}
-  let mainAct=null;
-  function mainBtn(pend){const b=$("rmMain"),h=$("rmHint");let t,cls="btn rmBig",act=null,hint="";
+  let mainAct=null,mainArg;
+  function mainBtn(pend){const b=$("rmMain"),h=$("rmHint");let t,cls="btn rmBig",act=null,arg,hint="";
     if(pend){t="送信中…";hint="映す画面に送っています";}
+    else if(st.standby){t="待ち受けを閉じて始める";cls+=" apply";act="standby";arg=false;hint="待ち受け画面を映しています";}
     else if(st.setup){t="抽選画面を開始する";cls+=" apply";act="start";hint="映す画面は設定画面です";}
     else if(st.spinning){t="抽選中…";hint="ルーレットが回っています";}
     else if(st.grand){t="発表画面を閉じる";act="grandClose";hint="当選発表を映しています";}
     else if(st.canDraw){t="ルーレット スタート";cls+=" primary";act="draw";hint=st.photo?"写真を映しています。押すと写真を閉じて抽選します":"準備ができたら押してください";}
     else if(st.canNext){t=st.nextLabel||"次へ";cls+=" apply";act="next";hint="この賞は抽選済みです。次の賞へ進みます";}
     else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint="";}
-    b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;h.textContent=hint;}
+    b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;mainArg=arg;h.textContent=hint;}
   function startRemote(){
-    $("rmMain").onclick=()=>{if(mainAct)send(mainAct)};document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
+    $("rmMain").onclick=()=>{if(mainAct)send(mainAct,mainArg)};document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
     $("rmStart").onclick=()=>send("start");
     $("rmDraw").onclick=()=>send("draw");$("rmNext").onclick=()=>send("next");$("rmPrev").onclick=()=>send("prev");
     $("rmGrand").onclick=()=>send("grandClose");$("rmReplay").onclick=()=>send("replay");
