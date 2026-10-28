@@ -65,6 +65,12 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,15vw,8rem);
 /* settings */
 #setup{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:16px}
 #setup h2{margin:0;font-size:1.1rem}
+.setTop{display:grid;gap:12px;padding:16px;border:2px solid var(--gold);border-radius:12px;background:var(--bg)}
+.setHead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.setHead h2{color:var(--gold)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.setTop .shareBox{background:var(--panel)}
+.setBottom{justify-content:flex-start!important;padding-top:12px;border-top:1px solid var(--line)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
 input{font:500 1rem var(--body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
@@ -374,23 +380,47 @@ body.screenMode #log{display:none}
   </header>
 
   <section id="setup">
-    <h2>抽選の設定</h2>
-    <div class="grid2">
-      <label for="maxNum">配った番号札の最大番号（1〜この番号で抽選）
-        <input id="maxNum" type="number" min="1" value="80" inputmode="numeric">
-      </label>
-      <label for="exclude">欠席・対象外の番号（カンマ区切り、例：3,17,25）
-        <input id="exclude" type="text" placeholder="なし">
-      </label>
-    </div>
-    <div class="grid2">
-      <label for="startAt">抽選会の開始予定時刻（任意・待ち受け画面に「開始まで」を表示）
-        <input id="startAt" type="time">
-      </label>
-      <div style="align-self:end"><button class="btn" id="standbyBtn2" type="button">待ち受け画面を映す</button></div>
+    <div class="setTop">
+      <div class="setHead"><h2>基本設定</h2><span class="note">番号札・開始時刻・開始／反映・やり直しはここにまとめています</span></div>
+      <div class="grid3">
+        <label for="maxNum">配った番号札の最大番号（1〜この番号で抽選）
+          <input id="maxNum" type="number" min="1" value="80" inputmode="numeric">
+        </label>
+        <label for="exclude">欠席・対象外の番号（カンマ区切り、例：3,17,25）
+          <input id="exclude" type="text" placeholder="なし">
+        </label>
+        <label for="startAt">開始予定時刻（任意・待ち受け画面に表示）
+          <input id="startAt" type="time">
+        </label>
+      </div>
+      <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
+      <div class="controls" style="justify-content:flex-start">
+        <button class="btn primary" id="startBtn" type="button">この設定で開始</button>
+        <button class="btn apply" id="applyBtn" type="button">設定を全端末に反映する</button>
+        <button class="btn" id="standbyBtn2" type="button">待ち受け画面を映す</button>
+        <button class="btn" id="setupReset" type="button">最初からやり直す（全結果を消す）</button>
+      </div>
+      <div class="grid2">
+    <div class="shareBox">
+        <h2>端末間の共有</h2>
+        <p class="note" id="shareInfo">確認中…</p>
+        <div class="controls" style="justify-content:flex-start">
+          <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
+        </div>
+        <p class="note" id="shareMsg"></p>
+      </div>
+    <div class="shareBox">
+        <h2>2台で使う（映す画面とリモコン）</h2>
+        <p class="note">プロジェクターにつないだ端末で「映す画面にする」、手元の端末（スマホ可）で「リモコンにする」を押します。リモコンのボタンで、映す画面のルーレットが回り、音楽と演出も映す画面で流れます。</p>
+        <div class="controls" style="justify-content:flex-start">
+          <a class="btn small" href="?role=screen">この端末を映す画面にする</a>
+          <a class="btn small" href="?role=remote">この端末をリモコンにする</a>
+        </div>
+      </div>
+      </div>
     </div>
     <div style="display:grid;gap:4px">
-      <h2>賞と景品</h2>
+      <h2>各賞と商品の設定</h2>
       <p class="note">上ほど格上の賞です。抽選は一番下の賞から始まり、一番上の賞で終わります。</p>
       <div id="prizeRows"></div>
       <div class="tierBtns">
@@ -405,26 +435,9 @@ body.screenMode #log{display:none}
       <div id="planRows"></div>
       <div class="tierBtns"><button class="btn small" id="addPlan" type="button">＋ 追加抽選の賞を準備</button></div>
     </div>
-    <div class="shareBox">
-      <h2>端末間の共有</h2>
-      <p class="note" id="shareInfo">確認中…</p>
-      <div class="controls" style="justify-content:flex-start">
-        <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
-      </div>
-      <p class="note" id="shareMsg"></p>
-    </div>
-    <div class="shareBox">
-      <h2>2台で使う（映す画面とリモコン）</h2>
-      <p class="note">プロジェクターにつないだ端末で「映す画面にする」、手元の端末（スマホ可）で「リモコンにする」を押します。リモコンのボタンで、映す画面のルーレットが回り、音楽と演出も映す画面で流れます。</p>
-      <div class="controls" style="justify-content:flex-start">
-        <a class="btn small" href="?role=screen">この端末を映す画面にする</a>
-        <a class="btn small" href="?role=remote">この端末をリモコンにする</a>
-      </div>
-    </div>
-    <p class="note" id="setupMsg">受付が終わってから最大番号を入れてください。同じ番号が2回当たることはありません。</p>
-    <div class="controls" style="justify-content:flex-start">
-      <button class="btn apply" id="applyBtn" type="button">設定を全端末に反映する</button>
-      <button class="btn primary" id="startBtn" type="button">この設定で開始</button>
+    <div class="controls setBottom">
+      <button class="btn primary" id="startBtnB" type="button">この設定で開始</button>
+      <button class="btn apply" id="applyBtnB" type="button">設定を全端末に反映する</button>
     </div>
   </section>
 
@@ -783,7 +796,7 @@ $("startBtn").onclick=()=>{readForm();
   S.started=true;save();showMain();autoPhoto();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
   if(first&&ROLE!=="screen")Standby.show(); // 開始したら、まず待ち受け画面を映す
 };
-function msg(t){$("setupMsg").innerHTML=`<span class="err">${esc(t)}</span>`}
+function msg(t){$("setupMsg").innerHTML=`<span class="err">${esc(t)}</span>`;const r=$("setupMsg").getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)$("setupMsg").scrollIntoView({behavior:"smooth",block:"center"})}
 
 /* ---------- main ---------- */
 function showMain(){
@@ -1014,13 +1027,26 @@ $("resetBtn").onclick=()=>{
     return;
   }
   clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
+  resetAll();
+};
+function resetAll(){
   Music.stop();Grand.hide();Summary.hide();$("stage").classList.remove("suspense");setBoard(false);
   clearDraw();S.started=false;save();
   $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
   $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";$("setupBtn").textContent="設定";
   $("setupMsg").textContent="結果を消しました。設定を確認して開始してください。";
   renderSetup();window.scrollTo({top:0,behavior:"smooth"});
-};
+}
+let setupResetArmed=null;const SETUP_RESET_LABEL="最初からやり直す（全結果を消す）";
+$("setupReset").onclick=()=>{if(spinning)return;const b=$("setupReset");
+  if(!anyDrawn()&&!S.started){$("setupMsg").textContent="まだ抽選結果はありません。";return}
+  if(!setupResetArmed){b.textContent="もう一度押すと、すべての当選結果を消します";b.classList.add("danger");
+    setupResetArmed=setTimeout(()=>{setupResetArmed=null;b.textContent=SETUP_RESET_LABEL;b.classList.remove("danger")},4000);return}
+  clearTimeout(setupResetArmed);setupResetArmed=null;b.textContent=SETUP_RESET_LABEL;b.classList.remove("danger");resetAll();};
+$("startBtnB").onclick=()=>$("startBtn").click();
+$("applyBtnB").onclick=()=>$("applyBtn").click();
+new MutationObserver(()=>{$("startBtnB").textContent=$("startBtn").textContent}).observe($("startBtn"),{childList:true,characterData:true,subtree:true});
+new MutationObserver(()=>{$("applyBtnB").textContent=$("applyBtn").textContent;$("applyBtnB").disabled=$("applyBtn").disabled}).observe($("applyBtn"),{childList:true,subtree:true,attributes:true});
 
 /* ---------- sound (Web Audio, no files) ---------- */
 const Music=(()=>{
@@ -1171,7 +1197,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/28-11";
+const PAGE_VERSION="商品名版 10/28-12";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
