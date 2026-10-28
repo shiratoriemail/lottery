@@ -270,6 +270,55 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 @keyframes fadeUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}
   #stage.suspense,#grand .rays,#grand.go *,#grand.go::after,.cdNum{animation:none!important}}
+/* ---------- 待ち受け画面（抽選会が始まるまで映しておく） ---------- */
+#standby{position:fixed;inset:0;z-index:60;overflow:hidden;color:#fff7e0;
+  background:radial-gradient(ellipse at 50% 30%,#3a2a5c 0%,#1a1430 45%,#08060f 100%)}
+#standby::before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 0 8deg,rgba(242,193,78,.07) 8deg 16deg,transparent 16deg 30deg);
+  animation:sbRot 90s linear infinite;pointer-events:none}
+@keyframes sbRot{to{transform:rotate(360deg)}}
+#sbFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.sbInner{position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr) auto;justify-items:center;align-items:center;
+  gap:clamp(4px,1.4vh,14px);padding:clamp(18px,5vh,56px) 16px clamp(16px,4vh,40px);text-align:center}
+.sbEyebrow{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:800;color:var(--gold);
+  font-size:clamp(1rem,3.2vh,2.2rem);letter-spacing:.3em;padding-left:.3em;display:flex;align-items:center;gap:.8em;white-space:nowrap;max-width:100%}
+.sbEyebrow::before,.sbEyebrow::after{content:"";width:clamp(20px,8vw,120px);height:2px;background:linear-gradient(90deg,transparent,var(--gold))}
+.sbEyebrow::after{transform:scaleX(-1)}
+.sbTitle{font-family:var(--display);font-size:clamp(3rem,min(17vw,19vh),12rem);line-height:1.05;letter-spacing:.14em;padding-left:.14em;
+  background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite;
+  filter:drop-shadow(0 5px 0 #6b4a12) drop-shadow(0 0 34px rgba(242,193,78,.45))}
+.sbRule{font-size:clamp(.75rem,1.8vh,1.1rem);letter-spacing:.5em;padding-left:.5em;color:#cfc6e8}
+.sbSoon{display:grid;gap:.2em;justify-items:center}
+.sbSoon .big{font-family:var(--display);font-size:clamp(1.4rem,5vh,3.4rem);color:#fff;letter-spacing:.12em;animation:sbPulse 2.4s ease-in-out infinite}
+.sbSoon .cd{font-family:var(--num);font-weight:700;font-size:clamp(1.6rem,7vh,4.6rem);color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
+.sbSoon .at{font-size:clamp(.9rem,2.4vh,1.5rem);color:#d8d0ee;letter-spacing:.1em}
+@keyframes sbPulse{50%{opacity:.55}}
+.sbShow{width:min(1100px,100%);height:100%;min-height:0;display:grid;place-items:center;position:relative}
+.sbCard{position:absolute;inset:0;box-sizing:border-box;display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:auto minmax(0,1fr);justify-content:center;align-items:center;gap:clamp(12px,3vw,40px);
+  padding:clamp(10px,2vh,24px) clamp(14px,3vw,36px);opacity:0;transform:translateY(16px) scale(.98);transition:opacity .9s,transform .9s;pointer-events:none}
+.sbCard.on{opacity:1;transform:none}
+.sbCard.noimg{grid-template-columns:minmax(0,1fr)}
+.sbCard img{height:100%;max-height:44vh;min-height:0;width:auto;max-width:46vw;align-self:center;justify-self:end;aspect-ratio:4/3;object-fit:cover;border-radius:16px;border:3px solid var(--c,var(--gold));box-shadow:0 0 40px rgba(242,193,78,.25)}
+.sbCard .txt{display:grid;gap:.3em;justify-items:start;text-align:left;min-width:0}
+.sbCard.noimg .txt{justify-items:center;text-align:center}
+.sbCard .k{font-size:clamp(.8rem,2.2vh,1.3rem);letter-spacing:.3em;color:#cfc6e8}
+.sbCard .n{font-family:var(--display);font-size:clamp(1.6rem,6.5vh,4.4rem);line-height:1.15;color:var(--c,var(--gold));overflow-wrap:anywhere}
+.sbCard .c{font-family:var(--display);font-size:clamp(1rem,3.4vh,2rem);color:#fff}
+.sbList{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:clamp(8px,1.6vh,16px);max-height:100%;overflow:hidden}
+.sbList .chip{display:grid;justify-items:center;padding:.5em 1.1em;border:2px solid var(--c,var(--gold));border-radius:14px;background:rgba(12,9,22,.6);
+  font-size:clamp(.9rem,2.8vh,1.7rem)}
+.sbList .chip b{font-family:var(--display);font-weight:400;color:var(--c,var(--gold));font-size:1.25em;line-height:1.2}
+.sbList .chip span{color:#e8e1f8}
+.sbDots{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+.sbDots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25)}
+.sbDots i.on{background:var(--gold)}
+.sbNote{font-size:clamp(1rem,3vh,1.8rem);letter-spacing:.12em;color:#fff;padding:.3em 1.2em;border-top:1px solid rgba(242,193,78,.45);border-bottom:1px solid rgba(242,193,78,.45)}
+.sbClock{position:absolute;right:clamp(12px,2vw,28px);top:clamp(10px,2vh,24px);font-family:var(--num);font-weight:700;font-size:clamp(1rem,2.6vh,1.6rem);color:#cfc6e8;font-variant-numeric:tabular-nums}
+#sbClose{position:absolute;left:clamp(10px,2vw,24px);top:clamp(10px,2vh,20px);opacity:.25;transition:opacity .3s}
+#sbClose:hover,#sbClose:focus-visible{opacity:1}
+@media (max-width:700px){.sbCard{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:8px}.sbCard .txt{justify-items:center;text-align:center}.sbCard img{max-height:26vh;max-width:90vw;justify-self:center}
+  .sbEyebrow{font-size:clamp(.7rem,3.4vw,1.1rem);letter-spacing:.06em;gap:.4em;padding-left:.06em}.sbEyebrow::before,.sbEyebrow::after{width:clamp(8px,3vw,24px)}.sbClock{display:none}}
+@media (prefers-reduced-motion:reduce){#standby::before,.sbTitle,.sbSoon .big{animation:none}.sbCard{transition:none}}
 </style>
 </head>
 <body>
@@ -277,6 +326,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 <div class="wrap">
   <div class="topbar">
     <button class="sync" id="syncStatus" data-kind="wait" type="button" aria-live="polite" title="押すと今すぐ確認します">接続中…</button>
+    <button class="btn small" id="standbyBtn" type="button">待ち受け画面</button>
     <button class="btn small" id="soundBtn" type="button">🔊 音あり</button>
     <button class="btn small" id="setupBtn" type="button">設定</button>
   </div>
@@ -304,6 +354,12 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
       <label for="exclude">欠席・対象外の番号（カンマ区切り、例：3,17,25）
         <input id="exclude" type="text" placeholder="なし">
       </label>
+    </div>
+    <div class="grid2">
+      <label for="startAt">抽選会の開始予定時刻（任意・待ち受け画面に「開始まで」を表示）
+        <input id="startAt" type="time">
+      </label>
+      <div style="align-self:end"><button class="btn" id="standbyBtn2" type="button">待ち受け画面を映す</button></div>
     </div>
     <div style="display:grid;gap:4px">
       <h2>賞と景品</h2>
@@ -434,10 +490,25 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
   </div>
 </div>
 
+<div id="standby" hidden role="dialog" aria-label="抽選会の待ち受け画面">
+  <canvas id="sbFx" aria-hidden="true"></canvas>
+  <div class="sbInner">
+    <div class="sbEyebrow">EPデータウィーブ 発足記念イベント</div>
+    <div class="sbTitle">抽選会</div>
+    <div class="sbRule">GRAND PRIZE DRAW</div>
+    <div class="sbSoon" id="sbSoon"></div>
+    <div class="sbShow" id="sbShow"></div>
+    <div class="sbNote">お手元の番号札をご用意ください</div>
+  </div>
+  <div class="sbClock" id="sbClock"></div>
+  <button class="btn small" id="sbClose" type="button">閉じる</button>
+</div>
+
 <script>
 const KEY="shohin-roulette-v1";
 const T=p=>p?(p.name||p.label||""):""; // 画面に出す名前＝商品名
 function rankSize(el,t){const n=[...(t||"")].length;el.style.fontSize=n<=6?"":`min(${(84/n).toFixed(1)}vw,${Math.max(1.6,40/n).toFixed(2)}rem)`;}
+const SB_ITEMS=true; // 待ち受け画面で商品名と写真を見せるか（商品名表示版は true）
 const FX={grand:"豪華（金色）",revival:"敗者復活スペシャル（赤・炎）",mid:"やや豪華",normal:"通常"};
 const isBig=fx=>fx==="grand"||fx==="revival"; // カウントダウン＋全画面発表あり
 const BOARD={on:"全画面で表示（標準）",off:"全画面にしない"};
@@ -498,7 +569,7 @@ const fxOptions=sel=>Object.entries(FX).map(([k,v])=>`<option value="${k}" ${sel
 
 /* ---------- setup ---------- */
 function renderSetup(){
-  $("maxNum").value=S.max;$("exclude").value=S.exclude;
+  $("maxNum").value=S.max;$("startAt").value=S.startAt||"";$("exclude").value=S.exclude;
   const locked=anyDrawn(),n=S.prizes.length;
   $("prizeRows").innerHTML=S.prizes.map((p,i)=>{const im=getImg(p.id),done=!!S.results[p.id];return `
     <div class="prizeBlock ${tierCls(p.id)}">
@@ -558,7 +629,7 @@ function readForm(){
   S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
     p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
     p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd")?g("pbd").value:(p.board==="off"?"off":"on");});
-  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;save();
+  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;S.startAt=$("startAt").value;save();
 }
 $("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
   const d=b.dataset,id=d.up||d.down||d.rm||d.del,i=posOf(id);
@@ -1010,7 +1081,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/28-1";
+const PAGE_VERSION="商品名版 10/28-2";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1171,6 +1242,61 @@ if(S.started)showMain();
 Sync.pull();
 setInterval(()=>Sync.pull(),4000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)Sync.pull()});
+const readFormIfOpen=()=>{if(!$("setup").hidden)readForm()};
+/* ---------- 待ち受け画面 ---------- */
+const Standby=(()=>{
+  const el=$("standby"),cv=$("sbFx"),ctx=cv.getContext("2d");
+  let timer=null,slide=0,raf=0,parts=[],fs=false,lock=null,lastSlide=0;
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pad=n=>String(n).padStart(2,"0");
+  const sbName=p=>SB_ITEMS?(p.name||p.label):p.label;
+  function soon(){const now=new Date(),box=$("sbSoon");$("sbClock").textContent=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const m=/^(\d{1,2}):(\d{2})$/.exec(S.startAt||"");
+    if(!m){box.innerHTML=`<div class="big">まもなく開始します</div>`;return}
+    const t=new Date(now);t.setHours(+m[1],+m[2],0,0);const s=Math.ceil((t-now)/1000);
+    if(s<=0){box.innerHTML=`<div class="big">まもなく開始します</div>`;return}
+    const h=Math.floor(s/3600),mm=Math.floor(s%3600/60),ss=s%60;
+    box.innerHTML=`<div class="at">${pad(+m[1])}:${m[2]} 開始予定</div><div class="cd">${h?`${h}:${pad(mm)}:${pad(ss)}`:`${pad(mm)}:${pad(ss)}`}</div><div class="at">開始まで</div>`;}
+  function build(){
+    const list=S.prizes.filter(p=>p.count>0),show=$("sbShow");
+    if(!list.length){show.innerHTML="";return}
+    if(!SB_ITEMS){ // 景品は当選まで伏せる版：賞と人数だけを一覧で
+      const total=list.reduce((a,p)=>a+p.count,0);
+      show.innerHTML=`<div class="sbList">${list.map(p=>`<div class="chip ${tierCls(p.id)}"><b>${esc(p.label)}</b><span>${p.count}名</span></div>`).join("")}
+        <div class="chip"><b>賞品 全${total}名</b><span>当選者はどなたに？</span></div></div>`;return}
+    show.innerHTML=list.map((p,i)=>{const src=imgSrc(p.id);
+      return `<div class="sbCard ${tierCls(p.id)}" data-i="${i}">${src?`<img src="${esc(src)}" alt="">`:""}<div class="txt"><div class="k">PRIZE ${i+1} / ${list.length}</div><div class="n">${esc(sbName(p))}</div><div class="c">${p.count}名様</div></div></div>`}).join("")
+      +(list.length>1?`<div class="sbDots">${list.map(()=>"<i></i>").join("")}</div>`:"");
+    show.querySelectorAll(".sbCard img").forEach(im=>im.onerror=()=>{const c=im.closest(".sbCard");im.remove();c.classList.add("noimg")});
+    show.querySelectorAll(".sbCard").forEach(c=>{if(!c.querySelector("img"))c.classList.add("noimg")});
+    slide=-1;next();}
+  function next(){const cards=[...$("sbShow").querySelectorAll(".sbCard")];if(!cards.length)return;
+    slide=(slide+1)%cards.length;cards.forEach((c,i)=>c.classList.toggle("on",i===slide));
+    $("sbShow").querySelectorAll(".sbDots i").forEach((d,i)=>d.classList.toggle("on",i===slide));lastSlide=Date.now();}
+  function tick(){soon();if(SB_ITEMS&&Date.now()-lastSlide>=6000)next();}
+  function size(){const r=devicePixelRatio||1;cv.width=innerWidth*r;cv.height=innerHeight*r;ctx.setTransform(r,0,0,r,0,0);
+    parts=Array.from({length:Math.round(Math.min(110,innerWidth/12))},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:.6+Math.random()*2.2,v:.15+Math.random()*.5,p:Math.random()*6.28}));}
+  function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);
+    for(const q of parts){q.y-=q.v;q.p+=.03;if(q.y<-6){q.y=innerHeight+6;q.x=Math.random()*innerWidth}
+      ctx.globalAlpha=.25+.55*Math.abs(Math.sin(q.p));ctx.fillStyle=q.r>2?"#fff2c4":"#f2c14e";ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,6.283);ctx.fill();}
+    ctx.globalAlpha=1;raf=requestAnimationFrame(draw);}
+  async function show(){el.hidden=false;document.body.classList.add("noscroll");build();tick();clearInterval(timer);timer=setInterval(tick,1000);
+    size();if(!still){cancelAnimationFrame(raf);draw();}
+    try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement&&!document.webkitFullscreenElement){await f.call(d);fs=true}}catch(e){}
+    try{if(navigator.wakeLock)lock=await navigator.wakeLock.request("screen")}catch(e){} // 画面が暗くならないように
+  }
+  function hide(){if(el.hidden)return;el.hidden=true;clearInterval(timer);cancelAnimationFrame(raf);
+    if(!$("stage").classList.contains("board"))document.body.classList.remove("noscroll");
+    try{if(fs){(document.exitFullscreen||document.webkitExitFullscreen).call(document)}}catch(e){}fs=false;
+    try{if(lock){lock.release();lock=null}}catch(e){}}
+  $("sbClose").onclick=hide;
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&!el.hidden)hide()});
+  addEventListener("resize",()=>{if(!el.hidden)size()});
+  document.addEventListener("visibilitychange",async()=>{if(!el.hidden&&document.visibilityState==="visible"&&navigator.wakeLock){try{lock=await navigator.wakeLock.request("screen")}catch(e){}}});
+  return {show,hide,refresh:()=>{if(!el.hidden)build()}};
+})();
+$("standbyBtn").onclick=()=>{readFormIfOpen();Standby.show();};
+$("standbyBtn2").onclick=()=>{readForm();Standby.show();};
 </script>
 </body>
 </html>
