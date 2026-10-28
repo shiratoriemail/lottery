@@ -564,6 +564,7 @@ body.screenMode #log{display:none}
   </details>
   <div class="rmRail" id="rmRail"></div>
   <button class="btn small" id="rmRedo" type="button">この賞を引き直す</button>
+  <button class="btn small" id="rmReset" type="button">最初からやり直す（全結果を消す）</button>
   <p class="note">設定の変更は <a href="?">通常の画面</a> で行います（変更は数秒で映す画面にも反映されます）。</p>
 </section>
 <div id="screenGate" hidden>
@@ -921,7 +922,7 @@ $("exGo").onclick=()=>{if(spinning)return;
   const avail=pool(p).length;
   if(avail<count){$("exMsg").innerHTML=`<span class="err">対象が${avail}名しかいません（当選済み・欠席の番号は除かれます）。人数か対象の番号を見直してください。</span>`;return;}
   const photo=exPhoto,isPlan=!!p.planned;
-  if(isPlan){delete p.planned;}else S.extras.push(p);
+  if(isPlan){delete p.planned;p.fromPlan=true;}else S.extras.push(p);
   if(photo&&photo!==getImg(p.id)){p.img=true;attachPhoto(p.id,photo,$("exMsg"));}
   exPhoto="";exPlanId="";const cur=S.order[S.idx];
   if(cur===undefined||!S.results[cur])S.order.splice(S.idx,0,p.id);else{S.order.splice(S.idx+1,0,p.id);S.idx++;}
@@ -958,6 +959,9 @@ $("setupBtn").onclick=()=>{ if(spinning)return;
     $("setup").scrollIntoView({behavior:"smooth",block:"start"});
   }
 };
+function clearDraw(){ // 抽選結果を消す（設定画面で準備した追加抽選は準備に戻す）
+  S.results={};S.extras=S.extras.filter(q=>q.planned||q.fromPlan).map(q=>{if(q.fromPlan){delete q.fromPlan;q.planned=true;q.only=[];}return q});
+  S.order=drawOrder();S.idx=0;}
 let resetArmed=null;
 $("resetBtn").onclick=()=>{
   if(spinning)return;
@@ -969,7 +973,7 @@ $("resetBtn").onclick=()=>{
   }
   clearTimeout(resetArmed);resetArmed=null;b.textContent="最初からやり直す";b.classList.remove("danger");
   Music.stop();Grand.hide();Summary.hide();$("stage").classList.remove("suspense");setBoard(false);
-  S.results={};S.extras=[];S.order=drawOrder();S.idx=0;S.started=false;save();
+  clearDraw();S.started=false;save();
   $("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;
   $("balls").innerHTML="";$("startBtn").textContent="この設定で開始";$("setupBtn").textContent="設定";
   $("setupMsg").textContent="結果を消しました。設定を確認して開始してください。";
@@ -1125,7 +1129,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/28-3";
+const PAGE_VERSION="10/28-4";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1369,7 +1373,10 @@ const Duo=(()=>{
       case "board":if(!spinning)click("boardBtn");break;
       case "photo":if(arg){const im=$("reveal").querySelector("img");if(im)openPhoto(im)}else closePhoto();break;
       case "sound":if(!!arg!==$("soundBtn").textContent.includes("あり"))$("soundBtn").click();break;
-      case "extra":runExtra(arg||{});break;}
+      case "extra":runExtra(arg||{});break;
+      case "reset":if(spinning)break;Music.stop();Grand.hide();Summary.hide();Standby.hide();closePhoto();$("stage").classList.remove("suspense","revive");
+        clearDraw();S.started=true;save();$("setupBtn").textContent="設定";showMain();if(typeof autoPhoto==="function")autoPhoto();
+        exMsg="最初からやり直しました。1番目の抽選から始められます。";break;}
     done=c.seq;}
   async function screenLoop(){
     try{const j=await post("/api/screen",{status:status(),after});
@@ -1386,7 +1393,7 @@ const Duo=(()=>{
     screenLoop();}
 
   /* ===== リモコン ===== */
-  let st=null,age=null,sent=0,redoArm=null;
+  let st=null,age=null,sent=0,redoArm=null,resetArm=null;
   const msg=(t,pend)=>{const m=$("rmMsg");m.textContent=t;m.classList.toggle("pend",!!pend)};
   async function send(action,arg){
     try{const j=await post("/api/cmd",{action,arg});sent=j.seq;msg("映す画面に送りました…",true);setTimeout(pull,250);}
@@ -1394,7 +1401,7 @@ const Duo=(()=>{
   async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;render();}
     catch(e){conn("off","サーバーに接続できません（起動に最大1分）");}}
   const conn=(k,t)=>{const c=$("rmConn");c.dataset.kind=k;c.textContent=t};
-  const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo"];
+  const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset"];
   function render(){
     const alive=st&&age!=null&&age<6;
     if(!alive){conn("off",st?`映す画面からの応答がありません（${Math.round(age||0)}秒）`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
@@ -1419,6 +1426,7 @@ const Duo=(()=>{
     set("rmSound",true,st.sound?"音を消す":"音を出す");
     set("rmExGo",!st.spinning&&!st.setup);
     if(!redoArm)set("rmRedo",st.canRedo);
+    if(!resetArm)set("rmReset",!st.spinning&&!st.setup);
     const pl=$("rmPlan"),cur=pl.value,opts=`<option value="">新しく入力する</option>`+st.plans.map(q=>`<option value="${esc(q.id)}">${esc(q.t)}・${q.c}名</option>`).join("");
     if(pl.dataset.o!==opts){pl.dataset.o=opts;pl.innerHTML=opts;pl.value=st.plans.some(q=>q.id===cur)?cur:(st.plans[0]?st.plans[0].id:"");pl.onchange();}
     $("rmRail").innerHTML=st.rail.map(r=>`<div class="${r.cur?"cur":""} ${r.d?"d":""}"><span>${esc(r.t)}</span><span>${r.c}名${r.d?"・済":""}</span></div>`).join("");}
@@ -1436,6 +1444,10 @@ const Duo=(()=>{
       if(!redoArm){b.textContent="もう一度押すと、この賞の結果を消して引き直します";b.classList.add("danger");
         redoArm=setTimeout(()=>{redoArm=null;b.textContent="この賞を引き直す";b.classList.remove("danger")},4000);return}
       clearTimeout(redoArm);redoArm=null;b.textContent="この賞を引き直す";b.classList.remove("danger");send("redo");};
+    $("rmReset").onclick=()=>{const b=$("rmReset"),L="最初からやり直す（全結果を消す）";
+      if(!resetArm){b.textContent="もう一度押すと、すべての当選結果を消して最初の抽選に戻ります";b.classList.add("danger");
+        resetArm=setTimeout(()=>{resetArm=null;b.textContent=L;b.classList.remove("danger")},4000);return}
+      clearTimeout(resetArm);resetArm=null;b.textContent=L;b.classList.remove("danger");send("reset");};
     pull();setInterval(pull,1000);}
   if(ROLE==="screen")startScreen();else if(ROLE==="remote")startRemote();
   return {};
