@@ -309,6 +309,10 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 @media (prefers-reduced-motion:reduce){#standby::before,.sbTitle,.sbSoon .big{animation:none}}
 /* ---------- 2台運用（映す画面＋リモコン） ---------- */
 body.remoteMode .wrap{display:none}
+/* 結果表示の画面（抽選結果だけを映す） */
+body.resultsMode .wrap,body.resultsMode #sumClose{display:none!important}
+body.resultsMode #summary{display:grid!important}
+body.resultsMode .sumGrid>.note{grid-column:1/-1;text-align:center;font-size:2.2em;margin-top:18vh;color:var(--muted)}
 /* リモコンから設定を変更するとき：設定画面だけを出す */
 .rsBar,#rsBackB{display:none}
 body.remoteMode.remoteSetup .wrap{display:grid}
@@ -424,11 +428,12 @@ body.screenMode #log{display:none}
         <p class="note" id="shareMsg"></p>
       </div>
     <div class="shareBox duoBox">
-        <h2>2台で使う（映す画面とリモコン）</h2>
+        <h2>複数台で使う（映す画面・リモコン・結果表示）</h2>
         <p class="note">プロジェクターにつないだ端末で「映す画面にする」、手元の端末（スマホ可）で「リモコンにする」を押します。リモコンのボタンで、映す画面のルーレットが回り、音楽と演出も映す画面で流れます。</p>
         <div class="controls" style="justify-content:flex-start">
           <a class="btn small" href="?role=screen">この端末を映す画面にする</a>
           <a class="btn small" href="?role=remote">この端末をリモコンにする</a>
+          <a class="btn small" href="?role=results">この端末を結果表示にする</a>
         </div>
       </div>
       </div>
@@ -1207,7 +1212,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/29-1";
+const PAGE_VERSION="10/30-1";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1545,7 +1550,15 @@ const Duo=(()=>{
         resetArm=setTimeout(()=>{resetArm=null;b.textContent=L;b.classList.remove("danger")},4000);return}
       clearTimeout(resetArm);resetArm=null;b.textContent=L;b.classList.remove("danger");send("reset");};
     pull();setInterval(pull,1000);}
-  if(ROLE==="screen")startScreen();else if(ROLE==="remote")startRemote();
+  function startResults(){ // 抽選結果だけを映す（数秒ごとに自動で更新）
+    document.body.classList.add("resultsMode");document.title="結果表示｜"+document.title;let last="";
+    const tick=()=>{const k=JSON.stringify([S.results,S.order,[...S.prizes,...S.extras].map(p=>[p.label,p.name,p.count,p.presenter,!!getImg(p.id)])]);
+      if(!Summary.isOpen()||k!==last){last=k;Summary.show();}};
+    tick();setInterval(tick,1000);setInterval(()=>Sync.pull(),2000);
+    document.addEventListener("click",async()=>{ // 1回タップすると全画面＋画面が暗くならないように
+      try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
+      try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}},{once:true});}
+  if(ROLE==="screen")startScreen();else if(ROLE==="remote")startRemote();else if(ROLE==="results")startResults();
   if(ROLE==="remote"){
     const open=()=>{Sync.pull();renderSetup();$("setupMsg").textContent="ここで変えた内容は自動で保存され、数秒で映す画面に反映されます。";document.body.classList.add("remoteSetup");window.scrollTo(0,0);};
     const close=()=>{readForm();document.body.classList.remove("remoteSetup");window.scrollTo(0,0);msg("設定を保存しました。数秒で映す画面に反映されます");};
