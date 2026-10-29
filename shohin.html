@@ -412,6 +412,7 @@ body.screenMode #log{display:none}
         <button class="btn apply" id="applyBtn" type="button">設定を全端末に反映する</button>
         <button class="btn" id="standbyBtn2" type="button">待ち受け画面を映す</button>
         <button class="btn" id="setupReset" type="button">最初からやり直す（全結果を消す）</button>
+        <button class="btn" id="bulkBtn" type="button">一括実行（残りの賞をまとめて抽選）</button>
       </div>
       <div class="grid2">
     <div class="shareBox">
@@ -1060,6 +1061,28 @@ $("setupReset").onclick=()=>{if(spinning)return;const b=$("setupReset");
   clearTimeout(setupResetArmed);setupResetArmed=null;b.textContent=SETUP_RESET_LABEL;b.classList.remove("danger");
   if(remoteSetupOn()){Duo.send("reset");$("setupMsg").textContent="映す画面で最初からやり直しました（待ち受け画面になります）。";return}
   resetAll();};
+/* 一括実行：演出なしで、まだ抽選していない賞をすべて一度に抽選（テスト・時間がないとき用） */
+let bulkArmed=null;const BULK_LABEL="一括実行（残りの賞をまとめて抽選）";
+$("bulkBtn").onclick=()=>{if(spinning)return;readForm();const b=$("bulkBtn");
+  if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return}
+  const fresh=!S.started&&!anyDrawn(),order=fresh?drawOrder():S.order;
+  const ids=order.filter(id=>prizeOf(id)&&!S.results[id]);
+  if(!ids.length){$("setupMsg").textContent="まだ抽選していない賞はありません。";return}
+  const need=ids.reduce((a,id)=>a+prizeOf(id).count,0),avail=pool().length;
+  if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return}
+  if(!bulkArmed){b.textContent=`もう一度押すと、残り${ids.length}賞（${need}名）を演出なしで一度に抽選します`;b.classList.add("danger");
+    bulkArmed=setTimeout(()=>{bulkArmed=null;b.textContent=BULK_LABEL;b.classList.remove("danger")},5000);return}
+  clearTimeout(bulkArmed);bulkArmed=null;b.textContent=BULK_LABEL;b.classList.remove("danger");
+  if(fresh){S.order=order;S.idx=0;}
+  let n=0;
+  for(const id of ids){const p=prizeOf(id),cand=pool(p);
+    if(cand.length<p.count){msg(`「${p.name||p.label}」の抽選対象が足りないため、ここで止めました（対象 ${cand.length}名）。`);break}
+    S.results[id]=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);n++;}
+  S.started=true;S.idx=S.order.findIndex(id=>!S.results[id]);if(S.idx<0)S.idx=S.order.length;save();
+  const done=`一括実行で ${n}賞を抽選しました。`;
+  if(remoteSetupOn()){$("setupMsg").textContent=done+"数秒で映す画面に反映されます。";return}
+  showMain();$("setupBtn").textContent="設定";renderSetup();if(S.idx>=S.order.length)Summary.show();
+  $("setupMsg").textContent=done;};
 $("startBtnB").onclick=()=>$("startBtn").click();
 $("applyBtnB").onclick=()=>$("applyBtn").click();
 new MutationObserver(()=>{$("startBtnB").textContent=$("startBtn").textContent}).observe($("startBtn"),{childList:true,characterData:true,subtree:true});
@@ -1214,7 +1237,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/28-13";
+const PAGE_VERSION="商品名版 10/29-1";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
