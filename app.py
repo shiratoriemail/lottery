@@ -316,7 +316,7 @@ def post_screen(ns=""):
         r["ts"] = time.time()
         # after<0 は映す画面を開いた直後：それまでの命令は実行しない
         fresh = [c for c in r["cmds"] if c["seq"] > after] if after >= 0 else []
-        return jsonify({"seq": r["seq"], "cmds": fresh})
+        return jsonify({"seq": r["seq"], "cmds": fresh, "now": time.time()})
 
 
 @app.get("/api/screen")

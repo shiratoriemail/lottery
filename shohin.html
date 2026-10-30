@@ -828,7 +828,7 @@ function renderRail(){
   $("rail").innerHTML=S.order.map(id=>{const p=prizeOf(id);if(!p)return "";const done=!!S.results[id];
     return `<div class="tier ${id===cur?"now":""} ${done?"done":""}"><span class="t rank ${tierCls(id)}">${esc(T(p))}</span><span class="p">${p.count}名${done?"・抽選済み":""}</span></div>`}).join("");
 }
-const lastGrand=()=>S.order.filter(id=>S.results[id]&&prizeOf(id)&&isBig(prizeOf(id).fx)).at(-1);
+const lastGrand=()=>S.order.filter(id=>S.results[id]&&prizeOf(id)&&isBig(prizeOf(id).fx)).slice(-1)[0];
 function setReplay(id){const b=$("replayBtn");b.hidden=!id;if(id){b.dataset.id=id;b.textContent=`${T(prizeOf(id))}の発表をもう一度`}}
 function prepareStage(){
   const id=S.order[S.idx];
@@ -1058,13 +1058,14 @@ function resetAll(){
   renderSetup();window.scrollTo({top:0,behavior:"smooth"});
 }
 const remoteSetupOn=()=>document.body.classList.contains("remoteSetup");
+function resetShared(){clearDraw();S.started=true;save();} // 共有データの結果を消す（映す画面は次の読み込みで追いつく）
 let setupResetArmed=null;const SETUP_RESET_LABEL="最初からやり直す（全結果を消す）";
 $("setupReset").onclick=()=>{if(spinning)return;const b=$("setupReset");
   if(!anyDrawn()&&!S.started){$("setupMsg").textContent="まだ抽選結果はありません。";return}
   if(!setupResetArmed){b.textContent="もう一度押すと、すべての当選結果を消します";b.classList.add("danger");
     setupResetArmed=setTimeout(()=>{setupResetArmed=null;b.textContent=SETUP_RESET_LABEL;b.classList.remove("danger")},4000);return}
   clearTimeout(setupResetArmed);setupResetArmed=null;b.textContent=SETUP_RESET_LABEL;b.classList.remove("danger");
-  if(remoteSetupOn()){Duo.send("reset");$("setupMsg").textContent="映す画面で最初からやり直しました（待ち受け画面になります）。";return}
+  if(remoteSetupOn()){resetShared();Duo.send("reset");$("setupMsg").textContent="映す画面で最初からやり直しました（待ち受け画面になります）。";return}
   resetAll();};
 /* 一括実行：演出なしで、まだ抽選していない賞をすべて一度に抽選（テスト・時間がないとき用） */
 let bulkArmed=null;const BULK_LABEL="一括実行（残りの賞をまとめて抽選）";
@@ -1242,14 +1243,15 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/30-1";
+const PAGE_VERSION="商品名版 10/30-3";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 function refreshAll(){
-  const setupOpen=!$("setup").hidden;
+  // 抽選中に「設定」で開いた設定画面だけ開いたままにする（開始前の設定画面は、他の端末が開始したら閉じる）
+  const setupOpen=!$("setup").hidden&&$("setupBtn").textContent==="設定を閉じる";
   if(S.started){showMain();if(setupOpen){$("setup").hidden=false;renderSetup();$("setupBtn").textContent="設定を閉じる";}}
   else{$("main").hidden=true;$("stage").hidden=true;$("log").hidden=true;$("setup").hidden=false;renderSetup();$("setupBtn").textContent="設定";}
 }
@@ -1269,19 +1271,23 @@ const Sync=(()=>{
   const setRev=r=>{rev=r;lsSet(REVKEY,String(r))};
   function canAdopt(){if(spinning)return false;const a=document.activeElement;
     return !(a&&a.closest&&a.closest("#setup,#extraPanel")&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
-  function adopt(state,r){S=migrate(state);setRev(r);markDirty(false);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}refreshAll();fetchImgs();}
+  let known=new Set(Object.keys(S.results)); // 共有済みの結果（やり直しで消された結果を復活させないため）
+  function adopt(state,r){S=migrate(state);known=new Set(Object.keys(S.results));setRev(r);markDirty(false);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}refreshAll();fetchImgs();}
   function schedule(){ver++;markDirty(true);if(choosing)return;status("wait","保存待ち…");clearTimeout(timer);timer=setTimeout(push,700);}
   async function push(){
     clearTimeout(timer);
     if(busy){timer=setTimeout(push,400);return}
-    busy=true;status("wait","保存中…");const sent=ver;
+    busy=true;status("wait","保存中…");const sent=ver,sentIds=Object.keys(S.results);
     try{
       const r=await call("/api/state",{method:"POST",body:JSON.stringify({rev,state:S})});
       const j=await r.json().catch(()=>({}));
       if(r.status===409){
-        if(j.state){adopt(j.state,j.rev);status("warn","他の端末の変更を読み込みました");setTimeout(()=>{if(!dirty)status("ok","共有中")},4000);}
+        if(j.state){
+          const m=rebase(j.state);
+          if(m){S=m;setRev(j.rev);ver++;markDirty(true);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}refreshAll();busy=false;await push();return}
+          adopt(j.state,j.rev);status("warn","他の端末の変更を読み込みました");setTimeout(()=>{if(!dirty)status("ok","共有中")},4000);}
         else{setRev(j.rev||0);busy=false;await push();return}
-      }else if(r.ok){setRev(j.rev);serverRev=j.rev;lastOk=new Date();lastErr="";reached=true;markDirty(ver!==sent);status(dirty?"wait":"ok",dirty?"保存待ち…":"共有中（保存済み）");if(dirty)timer=setTimeout(push,300);}
+      }else if(r.ok){setRev(j.rev);known=new Set(sentIds);serverRev=j.rev;lastOk=new Date();lastErr="";reached=true;markDirty(ver!==sent);status(dirty?"wait":"ok",dirty?"保存待ち…":"共有中（保存済み）");if(dirty)timer=setTimeout(push,300);}
       else throw new Error((j&&j.error)||("サーバーエラー "+r.status));
     }catch(e){reached=false;lastErr=errText(e);status("off","未送信の変更あり（接続待ち）");timer=setTimeout(push,8000);}
     finally{busy=false}
@@ -1289,7 +1295,21 @@ const Sync=(()=>{
   const sig=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));return JSON.stringify([m.prizes.map(p=>[p.label,p.name,p.count,p.presenter,p.fx,p.board==="off"?"off":"on"]),m.max,m.exclude,m.results,m.extras,m.started])}catch(e){return ""}};
   const summary=st=>{try{const m=migrate(JSON.parse(JSON.stringify(st)));const done=Object.keys(m.results||{}).length;
     return `${m.prizes.map(p=>T(p)).join("・")}／最大番号 ${m.max}${done?`／抽選済み ${done}賞`:""}`}catch(e){return ""}};
+  // 他の端末（リモコンの設定変更など）と保存がぶつかったとき：
+  // この端末で出した当選結果がサーバーに無ければ、サーバーの内容にその結果を重ねて保存し直す（結果が消えないように）
+  function rebase(server){
+    let m;try{m=migrate(JSON.parse(JSON.stringify(server)))}catch(e){return null}
+    const add=Object.keys(S.results).filter(id=>!m.results[id]&&!known.has(id)&&S.results[id].length); // 前回の同期より後に、この端末で出した結果だけ
+    if(!add.length)return null;
+    const taken=new Set(Object.values(m.results).flat());
+    S.extras.forEach(q=>{if(!m.extras.some(x=>x.id===q.id))m.extras.push(JSON.parse(JSON.stringify(q)))});
+    S.order.forEach((id,i)=>{if(!m.order.includes(id))m.order.splice(Math.min(i,m.order.length),0,id)});
+    add.forEach(id=>{if(S.results[id].every(n=>!taken.has(n)))m.results[id]=S.results[id].slice()});
+    m.started=true;const cur=S.order[S.idx];const k=m.order.indexOf(cur);m.idx=k>=0?k:S.idx;
+    return m;}
   function askChoice(j){
+    // 映す画面・リモコン・結果表示の端末は、迷わず共有サーバーの内容を使う
+    if(/^(screen|remote|results)$/.test(new URLSearchParams(location.search).get("role")||"")){adopt(j.state,j.rev);status("ok","共有中");return}
     choosing=true;status("warn","どちらの設定を使うか選んでください");
     $("syncChoiceInfo").textContent=`この端末：${summary(S)}　｜　共有サーバー：${summary(j.state)}`;
     $("syncChoice").hidden=false;$("syncChoice").scrollIntoView({behavior:"smooth",block:"start"});
@@ -1487,7 +1507,8 @@ const Duo=(()=>{
       case "grandClose":Grand.hide();break;
       case "replay":click("replayBtn");break;
       case "standby":if(arg){Standby.show();break}Standby.hide();
-        if(vis("setup")&&!S.started)click("startBtn");else if(typeof autoPhoto==="function")autoPhoto();break;
+        if(vis("setup")){if(!S.started)click("startBtn");else{click("setupBtn");if(typeof autoPhoto==="function")autoPhoto();}}
+        else if(typeof autoPhoto==="function")autoPhoto();break;
       case "summary":if(arg){if(anyDrawn()&&!spinning)Summary.show()}else Summary.hide();break;
       case "board":if(!spinning)click("boardBtn");break;
       case "photo":if(arg){const im=$("reveal").querySelector("img");if(im)openPhoto(im)}else closePhoto();break;
@@ -1499,7 +1520,7 @@ const Duo=(()=>{
     done=c.seq;}
   async function screenLoop(){
     try{const j=await post("/api/screen",{status:status(),after});
-      if(after<0)after=j.seq;else for(const c of j.cmds||[])if(c.seq>after){after=c.seq;queue.push(c)}
+      if(after<0)after=j.seq;else for(const c of j.cmds||[])if(c.seq>after){after=c.seq;if(j.now&&c.ts&&j.now-c.ts>15&&c.action!=="reset"){done=c.seq;continue}queue.push(c)}
       $("screenDot").textContent="● リモコン待機中";}
     catch(e){$("screenDot").textContent="○ サーバー接続待ち";}
     let ran=false;while(queue.length){const c=queue.shift();try{exec(c)}catch(e){done=c.seq}ran=true}
@@ -1509,6 +1530,7 @@ const Duo=(()=>{
     $("gateGo").onclick=async()=>{Music.unlock();ready=true;$("screenGate").hidden=true;Standby.show();
       try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
       try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}};
+    document.addEventListener("visibilitychange",async()=>{if(document.visibilityState==="visible"&&ready){try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}Sync.pull();}});
     screenLoop();}
 
   /* ===== リモコン ===== */
@@ -1524,7 +1546,7 @@ const Duo=(()=>{
   function render(){
     const alive=st&&age!=null&&age<6;
     if(!alive){conn("off",st?`映す画面からの応答がありません（${Math.round(age||0)}秒）`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
-      BTNS.forEach(b=>$(b).disabled=true);return}
+      BTNS.forEach(b=>$(b).disabled=true);if(!resetArm)$("rmReset").disabled=false;return}
     conn(st.ready?"ok":"warn",st.ready?"映す画面とつながっています":"映す画面で「映す画面として開始」を押してください（音と全画面のため）");
     if(sent===-1&&Date.now()-sentAt>15000)sent=0;
     if(sent>0&&(st.done>=sent||Date.now()-sentAt>6000)){msg(st.done>=sent?(st.exMsg||"映す画面で実行しました"):"映す画面の反応を待っています…");sent=0;}
@@ -1582,7 +1604,7 @@ const Duo=(()=>{
     $("rmReset").onclick=()=>{const b=$("rmReset"),L="最初からやり直す（全結果を消す）";
       if(!resetArm){b.textContent="もう一度押すと、すべての当選結果を消して最初の抽選に戻ります";b.classList.add("danger");
         resetArm=setTimeout(()=>{resetArm=null;b.textContent=L;b.classList.remove("danger")},4000);return}
-      clearTimeout(resetArm);resetArm=null;b.textContent=L;b.classList.remove("danger");send("reset");};
+      clearTimeout(resetArm);resetArm=null;b.textContent=L;b.classList.remove("danger");resetShared();send("reset");};
     pull();setInterval(pull,1000);}
   function startResults(){ // 抽選結果だけを映す（数秒ごとに自動で更新）
     document.body.classList.add("resultsMode");document.title="結果表示｜"+document.title;let last="";
