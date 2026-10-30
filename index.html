@@ -848,16 +848,18 @@ $("boardBtn").onclick=()=>{const on=!$("stage").classList.contains("board");boar
 addEventListener("resize",()=>requestAnimationFrame(fitBalls));
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 
-let spinning=false;
+let spinning=false,drawToken=0; // drawToken：やり直しで進行中の抽選を打ち切るための番号
 $("drawBtn").onclick=()=>{
   if(spinning)return;const id=S.order[S.idx],p=prizeOf(id);
   const cand=pool(p);if(cand.length<p.count){$("sub").textContent=`抽選対象が足りません（対象 ${cand.length}名）。`;return;}
   spinning=true;$("drawBtn").disabled=true;$("extraBtn").disabled=true;$("extraPanel").hidden=true;updateNav();
-  if(isBig(p.fx))countdown(p,()=>spin(id,p,cand));else spin(id,p,cand);
+  const tk=++drawToken;
+  if(isBig(p.fx))countdown(p,()=>{if(tk===drawToken)spin(id,p,cand)},tk);else spin(id,p,cand);
 };
-function countdown(p,done){
+function countdown(p,done,tk){
   const el=$("countdown");let n=3;el.hidden=false;el.classList.toggle("revive",p.fx==="revival");
-  const tick=()=>{if(n===0){el.hidden=true;el.innerHTML="";done();return}
+  const tick=()=>{if(tk!==undefined&&tk!==drawToken){el.hidden=true;el.innerHTML="";return}
+    if(n===0){el.hidden=true;el.innerHTML="";done();return}
     el.innerHTML=`${p.fx==="revival"?`<div class="cdEyebrow">REVIVAL ― 敗者復活</div>`:""}<div class="cdLabel">${esc(p.label)}</div><span class="cdNum">${n}</span>${p.presenter?`<div class="cdPres">抽選者　${esc(p.presenter)}</div>`:""}`;
     Music.count(n,p.fx);n--;setTimeout(tick,1000)};
   tick();
@@ -871,8 +873,9 @@ function spin(id,p,cand){
   Music.start(p.fx,dur/1000);
   if(grand){$("stage").classList.add("suspense");$("stage").classList.toggle("revive",revive);$("sub").textContent=revive?`よみがえるのは誰だ…！ ${p.label} 抽選中`:`運命の${p.label}、抽選中…`;}
   else $("sub").textContent=`${p.label} 抽選中…`;
-  let last=0,stopped=0;
+  let last=0,stopped=0,finished=false;const tk=drawToken;
   function frame(t){
+    if(finished||tk!==drawToken)return;
     const el=t-t0;let interval;
     if(grand){const next=stopAt.find(x=>x>el)??dur,prev=stopAt.filter(x=>x<=el).pop()||0;
       const k=Math.min(1,(el-prev)/Math.max(1,next-prev));interval=50+Math.pow(k,3)*480;}
@@ -885,13 +888,17 @@ function spin(id,p,cand){
     if(el<dur)requestAnimationFrame(frame);else finish();
   }
   function finish(){
+    if(finished||tk!==drawToken)return;finished=true;
     Music.stop();Music.fanfare(p.fx);
     S.results[id]=winners;save();
-    const after=()=>{$("stage").classList.remove("suspense","revive");spinning=false;$("extraBtn").disabled=false;showWinners(id,true);renderRail();renderLog();};
+    const after=()=>{if(tk!==drawToken)return;$("stage").classList.remove("suspense","revive");spinning=false;$("extraBtn").disabled=false;showWinners(id,true);renderRail();renderLog();};
     if(grand){$("sub").textContent=revive?`${p.label} 復活決定！`:`${p.label} 決定！`;setTimeout(()=>{after();Grand.show(id,winners);},1650);}
     else after();
   }
   requestAnimationFrame(frame);
+  // 画面が裏に回るとアニメーションが止まるため、時間が来たら必ず抽選を終える
+  setTimeout(()=>{if(finished||tk!==drawToken)return;
+    balls.forEach((b,i)=>{if(!b.classList.contains("win")){b.firstChild.textContent=fmt(winners[i]);b.classList.add("win",cls);}});finish();},dur+1000);
 }
 $("replayBtn").onclick=()=>{const id=$("replayBtn").dataset.id;if(id&&S.results[id]){Music.fanfare(prizeOf(id).fx);setTimeout(()=>Grand.show(id,S.results[id]),1650);}};
 function showWinners(id,anim){
@@ -1213,7 +1220,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="10/30-3";
+const PAGE_VERSION="10/30-4";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1455,7 +1462,7 @@ const Duo=(()=>{
       canSummary:anyDrawn(),sound:$("soundBtn").textContent.includes("あり"),
       plans:plans().map(q=>({id:q.id,t:q.label+(q.name&&q.name!==q.label?"（"+q.name+"）":""),c:q.count})),
       rail:S.order.map((x,i)=>{const q=prizeOf(x);return q?{t:dispTitle(q),c:q.count,d:!!S.results[x],cur:i===S.idx}:null}).filter(Boolean),
-      exMsg,done};}
+      exMsg,done,hidden:document.visibilityState!=="visible"};}
   function runExtra(a){if(spinning)return;
     if($("extraPanel").hidden)$("extraBtn").click();
     if(a.plan&&prizeOf(a.plan)){exPlanId=a.plan;$("exPlan").value=a.plan;$("exPlan").onchange();}
@@ -1480,7 +1487,7 @@ const Duo=(()=>{
       case "photo":if(arg){const im=$("reveal").querySelector("img");if(im)openPhoto(im)}else closePhoto();break;
       case "sound":if(!!arg!==$("soundBtn").textContent.includes("あり"))$("soundBtn").click();break;
       case "extra":runExtra(arg||{});break;
-      case "reset":if(spinning)break;Music.stop();Grand.hide();Summary.hide();Standby.hide();closePhoto();$("stage").classList.remove("suspense","revive");
+      case "reset":if(spinning){drawToken++;spinning=false;Music.stop();$("countdown").hidden=true;$("countdown").innerHTML="";$("drawBtn").disabled=false;$("extraBtn").disabled=false;}Music.stop();Grand.hide();Summary.hide();Standby.hide();closePhoto();$("stage").classList.remove("suspense","revive");
         clearDraw();S.started=true;save();$("setupBtn").textContent="設定";showMain();if(typeof autoPhoto==="function")autoPhoto();
         Standby.show();exMsg="最初からやり直しました。待ち受け画面を映しています。";break;}
     done=c.seq;}
@@ -1514,6 +1521,7 @@ const Duo=(()=>{
     if(!alive){conn("off",st?`映す画面からの応答がありません（${Math.round(age||0)}秒）`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
       BTNS.forEach(b=>$(b).disabled=true);if(!resetArm)$("rmReset").disabled=false;return}
     conn(st.ready?"ok":"warn",st.ready?"映す画面とつながっています":"映す画面で「映す画面として開始」を押してください（音と全画面のため）");
+    if(st.hidden)conn("warn","映す画面が裏に回っています。映す側のPCで前面に出してください");
     if(sent===-1&&Date.now()-sentAt>15000)sent=0;
     if(sent>0&&(st.done>=sent||Date.now()-sentAt>6000)){msg(st.done>=sent?(st.exMsg||"映す画面で実行しました"):"映す画面の反応を待っています…");sent=0;}
     const pend=!!sent;
@@ -1535,7 +1543,7 @@ const Duo=(()=>{
     set("rmSound",true,st.sound?"音を消す":"音を出す");
     set("rmExGo",!st.spinning&&!st.setup);
     if(!redoArm)set("rmRedo",st.canRedo);
-    if(!resetArm)set("rmReset",!st.spinning&&!st.setup);
+    if(!resetArm)set("rmReset",!st.setup);
     const pl=$("rmPlan"),cur=pl.value,opts=`<option value="">新しく入力する</option>`+st.plans.map(q=>`<option value="${esc(q.id)}">${esc(q.t)}・${q.c}名</option>`).join("");
     if(pl.dataset.o!==opts){pl.dataset.o=opts;pl.innerHTML=opts;pl.value=st.plans.some(q=>q.id===cur)?cur:(st.plans[0]?st.plans[0].id:"");pl.onchange();}
     mainBtn(pend);
