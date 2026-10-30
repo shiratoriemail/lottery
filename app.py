@@ -280,11 +280,21 @@ def del_img(img_id, ns=""):
 ACTIONS = {"reset", "draw", "next", "prev", "redo", "grandClose", "replay", "standby", "summary",
            "board", "photo", "extra", "start", "sound"}
 remote_lock = threading.Lock()
-remotes = {}  # 保存先ごと: {"seq", "cmds", "screen", "ts"}
+remotes = {}  # 保存先ごと: {"seq", "cmds", "screens": {画面ID: {"status","ts","claim"}}}
+ALIVE_SEC = 8  # この秒数以内に連絡のあった映す画面を「動いている」とみなす
 
 
 def remote_of(d):
-    return remotes.setdefault(d, {"seq": 0, "cmds": [], "screen": None, "ts": 0.0})
+    return remotes.setdefault(d, {"seq": 0, "cmds": [], "screens": {}})
+
+
+def leader_of(r, now):
+    """動いている映す画面のうち、最後に「映す画面として開始」を押した1台だけを本物とする"""
+    alive = {k: v for k, v in r["screens"].items() if now - v["ts"] < ALIVE_SEC}
+    if not alive:
+        return None, alive
+    lead = max(alive, key=lambda k: (alive[k]["claim"], alive[k]["ts"]))
+    return lead, alive
 
 
 @app.post("/api/cmd")
@@ -306,17 +316,24 @@ def post_cmd(ns=""):
 @app.post("/api/screen")
 @app.post("/api/ns/<ns>/screen")
 def post_screen(ns=""):
-    """映す画面が状態を送り、まだ実行していない命令を受け取る"""
+    """映す画面が状態を送り、まだ実行していない命令を受け取る。
+    映す画面が2台以上開いていても、命令を実行するのは1台（leader）だけ"""
     body = request.get_json(silent=True) or {}
     after = int(body.get("after", -1))
+    sid = str(body.get("id") or "old")[:40]
+    claim = float(body.get("claim") or 0)
     d = ns_dir()
     with remote_lock:
         r = remote_of(d)
-        r["screen"] = body.get("status")
-        r["ts"] = time.time()
+        now = time.time()
+        r["screens"][sid] = {"status": body.get("status"), "ts": now, "claim": claim}
+        for k in [k for k, v in r["screens"].items() if now - v["ts"] > 600]:
+            del r["screens"][k]
+        lead, alive = leader_of(r, now)
+        is_lead = lead == sid
         # after<0 は映す画面を開いた直後：それまでの命令は実行しない
-        fresh = [c for c in r["cmds"] if c["seq"] > after] if after >= 0 else []
-        return jsonify({"seq": r["seq"], "cmds": fresh, "now": time.time()})
+        fresh = [c for c in r["cmds"] if c["seq"] > after] if (after >= 0 and is_lead) else []
+        return jsonify({"seq": r["seq"], "cmds": fresh, "now": now, "leader": is_lead, "screens": len(alive)})
 
 
 @app.get("/api/screen")
@@ -325,8 +342,14 @@ def get_screen(ns=""):
     d = ns_dir()
     with remote_lock:
         r = remote_of(d)
-        age = time.time() - r["ts"] if r["ts"] else None
-        return jsonify({"seq": r["seq"], "status": r["screen"], "age": age})
+        now = time.time()
+        lead, alive = leader_of(r, now)
+        if lead is None:  # 動いている画面が無い：最後に連絡のあった画面を返す
+            if not r["screens"]:
+                return jsonify({"seq": r["seq"], "status": None, "age": None, "screens": 0})
+            lead = max(r["screens"], key=lambda k: r["screens"][k]["ts"])
+        v = r["screens"][lead]
+        return jsonify({"seq": r["seq"], "status": v["status"], "age": now - v["ts"], "screens": len(alive)})
 
 
 if __name__ == "__main__":

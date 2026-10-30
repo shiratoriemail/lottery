@@ -368,6 +368,8 @@ body.screenMode #log{display:none}
 #screenGate{position:fixed;inset:0;z-index:80;background:rgba(8,6,15,.94);display:grid;place-items:center;padding:16px;text-align:center}
 #screenGate>div{max-width:560px;display:grid;gap:14px;justify-items:center}
 #screenGate h2{font-family:var(--display);font-weight:400;color:var(--gold);font-size:2rem;margin:0}
+#screenSpare{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:90;max-width:min(92vw,720px);display:grid;gap:6px;padding:14px 18px;border:2px solid var(--red);border-radius:12px;background:rgba(30,8,8,.95);color:#fff;font-size:1rem;text-align:center}
+#screenSpare b{color:#ffb4a3;font-size:1.2rem}
 #screenDot{position:fixed;right:10px;bottom:6px;z-index:70;font-size:11px;color:#8a83a3;opacity:.45;pointer-events:none}
 </style>
 </head>
@@ -621,6 +623,7 @@ body.screenMode #log{display:none}
   </div>
 </div>
 <div id="screenDot" hidden></div>
+<div id="screenSpare" hidden><b>この端末は予備になっています</b><span>別の端末で「映す画面」が使われているため、リモコンの操作はそちらで実行されます。<br>この端末を使う場合は、ページを再読み込みして「映す画面として開始」を押してください。不要ならこのページを閉じてください。</span></div>
 
 <script>
 const KEY="shohin-roulette-v1";
@@ -919,7 +922,7 @@ function spin(id,p,cand){
   function finish(){
     if(finished||tk!==drawToken)return;finished=true;
     Music.stop();Music.fanfare(p.fx);
-    S.results[id]=winners;save();
+    S.results[id]=winners;save();Sync.flush();
     const after=()=>{if(tk!==drawToken)return;$("stage").classList.remove("suspense","revive");spinning=false;$("extraBtn").disabled=false;showWinners(id,true);renderRail();renderLog();};
     if(grand){$("sub").textContent=revive?`${T(p)} 復活決定！`:`${T(p)} 決定！`;setTimeout(()=>{after();Grand.show(id,winners);},1650);}
     else after();
@@ -1091,7 +1094,7 @@ $("bulkBtn").onclick=()=>{if(spinning)return;readForm();const b=$("bulkBtn");
   for(const id of ids){const p=prizeOf(id),cand=pool(p);
     if(cand.length<p.count){msg(`「${p.name||p.label}」の抽選対象が足りないため、ここで止めました（対象 ${cand.length}名）。`);break}
     S.results[id]=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);n++;}
-  S.started=true;S.idx=S.order.findIndex(id=>!S.results[id]);if(S.idx<0)S.idx=S.order.length;save();
+  S.started=true;S.idx=S.order.findIndex(id=>!S.results[id]);if(S.idx<0)S.idx=S.order.length;save();Sync.flush();
   const done=`一括実行で ${n}賞を抽選しました。`;
   if(remoteSetupOn()){$("setupMsg").textContent=done+"数秒で映す画面に反映されます。";return}
   showMain();$("setupBtn").textContent="設定";renderSetup();if(S.idx>=S.order.length)Summary.show();
@@ -1250,7 +1253,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/30-4";
+const PAGE_VERSION="商品名版 10/30-6";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1374,7 +1377,12 @@ const Sync=(()=>{
   $("loadNow").onclick=()=>loadNow();
   el.onclick=()=>{first=false;pull();};
   syncHook=schedule;
-  return {pull,putImg,delImg,fetchImgs,info,sendNow};
+  // 当選結果はすぐ保存（待たずに送る）
+  function flush(){if(dirty&&!choosing){clearTimeout(timer);push();}}
+  // ページを閉じる・再読み込みする瞬間に、まだ送っていない変更を送る
+  addEventListener("pagehide",()=>{if(!dirty||choosing)return;
+    try{fetch(API_BASE+apiPath("/api/state"),{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({rev,state:S})})}catch(e){}});
+  return {pull,putImg,delImg,fetchImgs,info,sendNow,flush};
 })();
 
 /* ---------- 結果一覧 ---------- */
@@ -1484,7 +1492,8 @@ const Duo=(()=>{
   const click=id=>{const b=$(id);if(b&&!b.hidden&&!b.disabled)b.click()};
 
   /* ===== 映す画面 ===== */
-  let after=-1,done=0,ready=false,exMsg="";const queue=[];
+  let after=-1,done=0,ready=false,exMsg="",claim=0;const queue=[];
+  const SCREEN_ID=Date.now().toString(36)+Math.random().toString(36).slice(2,8); // このページを見分ける番号
   function status(){const id=S.order[S.idx],p=prizeOf(id);
     return {ready,setup:vis("setup"),started:!!S.started,idx:S.idx,n:S.order.length,
       title:$("rank").textContent,sub:$("sub").textContent,prize:$("prize").classList.contains("show")?$("prize").textContent:"",
@@ -1526,27 +1535,29 @@ const Duo=(()=>{
         Standby.show();exMsg="最初からやり直しました。待ち受け画面を映しています。";break;}
     done=c.seq;}
   async function screenLoop(){
-    try{const j=await post("/api/screen",{status:status(),after});
-      if(after<0)after=j.seq;else for(const c of j.cmds||[])if(c.seq>after){after=c.seq;if(j.now&&c.ts&&j.now-c.ts>15&&c.action!=="reset"){done=c.seq;continue}queue.push(c)}
-      $("screenDot").textContent="● リモコン待機中";}
+    try{const j=await post("/api/screen",{status:status(),after,id:SCREEN_ID,claim});
+      const spare=j.leader===false;$("screenSpare").hidden=!spare;
+      if(after<0||spare)after=j.seq; // 予備の画面は命令を実行しない（本物に切り替わっても古い命令は実行しない）
+      else for(const c of j.cmds||[])if(c.seq>after){after=c.seq;if(j.now&&c.ts&&j.now-c.ts>15&&c.action!=="reset"){done=c.seq;continue}queue.push(c)}
+      $("screenDot").textContent=spare?"○ 予備の画面":(j.screens>1?`● リモコン待機中（映す画面 ${j.screens}台）`:"● リモコン待機中");}
     catch(e){$("screenDot").textContent="○ サーバー接続待ち";}
     let ran=false;while(queue.length){const c=queue.shift();try{exec(c)}catch(e){done=c.seq}ran=true}
-    if(ran){try{await post("/api/screen",{status:status(),after})}catch(e){}}
+    if(ran){try{await post("/api/screen",{status:status(),after,id:SCREEN_ID,claim})}catch(e){}}
     setTimeout(screenLoop,ran?400:700);}
   function startScreen(){document.body.classList.add("screenMode");$("screenGate").hidden=false;$("screenDot").hidden=false;
-    $("gateGo").onclick=async()=>{Music.unlock();ready=true;$("screenGate").hidden=true;Standby.show();
+    $("gateGo").onclick=async()=>{Music.unlock();ready=true;claim=Date.now()/1000;$("screenGate").hidden=true;Standby.show();
       try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
       try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}};
     document.addEventListener("visibilitychange",async()=>{if(document.visibilityState==="visible"&&ready){try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}Sync.pull();}});
     screenLoop();}
 
   /* ===== リモコン ===== */
-  let st=null,age=null,sent=0,sentAt=0,redoArm=null,resetArm=null;
+  let st=null,age=null,screens=0,sent=0,sentAt=0,redoArm=null,resetArm=null;
   const msg=(t,pend)=>{const m=$("rmMsg");m.textContent=t;m.classList.toggle("pend",!!pend)};
   async function send(action,arg){
     sentAt=Date.now();sent=-1;if(st)render();try{const j=await post("/api/cmd",{action,arg});sent=j.seq;sentAt=Date.now();msg("映す画面に送りました…",true);setTimeout(pull,250);}
     catch(e){sent=0;msg("送れませんでした："+((e&&e.name==="AbortError")?"時間切れ":e.message));if(st)render();}}
-  async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;render();}
+  async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;screens=j.screens||0;render();}
     catch(e){conn("off","サーバーに接続できません（起動に最大1分）");}}
   const conn=(k,t)=>{const c=$("rmConn");c.dataset.kind=k;c.textContent=t};
   const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset","rmMain"];
@@ -1556,6 +1567,7 @@ const Duo=(()=>{
       BTNS.forEach(b=>$(b).disabled=true);if(!resetArm)$("rmReset").disabled=false;return}
     conn(st.ready?"ok":"warn",st.ready?"映す画面とつながっています":"映す画面で「映す画面として開始」を押してください（音と全画面のため）");
     if(st.hidden)conn("warn","映す画面が裏に回っています。映す側のPCで前面に出してください");
+    if(screens>1)conn("warn",`映す画面が${screens}台開いています。最後に開始した1台だけが動きます。不要な方を閉じてください`);
     if(sent===-1&&Date.now()-sentAt>15000)sent=0;
     if(sent>0&&(st.done>=sent||Date.now()-sentAt>6000)){msg(st.done>=sent?(st.exMsg||"映す画面で実行しました"):"映す画面の反応を待っています…");sent=0;}
     const pend=!!sent;
