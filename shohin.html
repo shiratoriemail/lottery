@@ -235,6 +235,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 #pvLabel{font-family:var(--display);font-size:clamp(1.4rem,4vw,2.6rem);color:var(--gold)}
 #pvName{font-family:var(--display);font-size:clamp(1.2rem,3.4vw,2.2rem);color:var(--fg)}
 #photoClose{cursor:pointer}
+body.screenMode #photoClose{display:none}
 @media (prefers-reduced-motion:reduce){#photoImg{animation:none}}
 /* 1等 suspense on stage */
 #stage.suspense{animation:glow 1s ease-in-out infinite alternate}
@@ -334,6 +335,8 @@ html:has(body.remoteMode),body.remoteMode,body.remoteMode.noscroll{overflow:auto
 .rmRow{display:flex;gap:8px;align-items:stretch}.rmRow #rmMain{flex:1;min-width:0}
 .rmPhotoX{flex:none;width:68px;padding:4px;font-size:.72rem;line-height:1.25;font-weight:700;color:var(--muted);background:var(--bg);border-color:var(--line)}
 .rmPhotoX:disabled{opacity:.25}
+.rmRow.photoOpen #rmMain{flex:none;width:34%;font-size:.95rem;padding:8px 6px;line-height:1.3}
+.rmRow.photoOpen .rmPhotoX{flex:1;width:auto;min-height:72px;font-family:var(--display);font-weight:400;font-size:1.45rem;color:#241a00;background:var(--gold);border-color:var(--gold)}
 .rmHint{margin:0;text-align:center;font-size:.85rem;color:var(--fg)}
 #remote .btn{touch-action:manipulation}
 .rmTop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1267,7 +1270,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-4";
+const PAGE_VERSION="商品名版 11/02-6";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1620,6 +1623,7 @@ const Duo=(()=>{
     const pl=$("rmPlan"),cur=pl.value,opts=`<option value="">新しく入力する</option>`+st.plans.map(q=>`<option value="${esc(q.id)}">${esc(q.t)}・${q.c}名</option>`).join("");
     if(pl.dataset.o!==opts){pl.dataset.o=opts;pl.innerHTML=opts;pl.value=st.plans.some(q=>q.id===cur)?cur:(st.plans[0]?st.plans[0].id:"");pl.onchange();}
     mainBtn(pend);$("rmPhotoX").disabled=pend||!st.photo;
+    {const op=!pend&&st.photo&&st.canDraw&&!st.spinning&&!st.grand&&!st.setup&&!st.standby,row=document.querySelector(".rmRow");if(row.classList.contains("photoOpen")!==op){row.classList.toggle("photoOpen",op);$("rmPhotoX").innerHTML=op?"写真を閉じる":"写真を<br>閉じる";}}
     if(pend)["rmDraw","rmNext","rmPrev","rmRedo","rmReset"].forEach(b=>$(b).disabled=true);
     $("rmRail").innerHTML=st.rail.map(r=>`<div class="${r.cur?"cur":""} ${r.d?"d":""}"><span>${esc(r.t)}</span><span>${r.c}名${r.d?"・済":""}</span></div>`).join("");}
   let mainAct=null,mainArg;
@@ -1629,7 +1633,7 @@ const Duo=(()=>{
     else if(st.setup){t="抽選画面を開始する";cls+=" apply";act="start";hint="映す画面は設定画面です";}
     else if(st.spinning){t="抽選中…";hint="ルーレットが回っています";}
     else if(st.grand){t="発表画面を閉じる";act="grandClose";hint="当選発表を映しています";}
-    else if(st.canDraw){t="ルーレット スタート";cls+=" primary";act="draw";hint=st.photo?"写真を映しています。押すと写真を閉じて抽選します":"準備ができたら押してください";}
+    else if(st.canDraw){t="ルーレット スタート";cls+=" primary";act="draw";hint=st.photo?"写真を映しています。紹介が終わったら「写真を閉じる」を押してください":"準備ができたら押してください";}
     else if(st.canNext){t=st.nextLabel||"次へ";cls+=" apply";act="next";hint="この賞は抽選済みです。次の賞へ進みます";}
     else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint="";}
     b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;mainArg=arg;h.textContent=hint;}
