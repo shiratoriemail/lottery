@@ -905,7 +905,7 @@ function countdown(p,done,tk){
 function spin(id,p,cand){
   const winners=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);
   const balls=[...$("balls").children],cls=tierCls(id),grand=isBig(p.fx),revive=p.fx==="revival";
-  const dur=grand?16000:p.fx==="mid"?6000:(p.count>30?6000:4500),t0=performance.now();
+  const dur=grand?16000:p.fx==="mid"?5000:(p.count>30?6000:4500),t0=performance.now();
   // 豪華演出で2名のとき: 1人目は中盤で確定、2人目は最後まで引っぱる
   const stopAt=(grand&&balls.length===2)?[dur*0.5,dur]:balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
   Music.start(p.fx,dur/1000);
@@ -1177,6 +1177,10 @@ const Music=(()=>{
     [1174.7,1480,1760,2349.3,2960,3520].forEach((f,i)=>note(f,t+1.95+i*.06,1.4,"sine",.08));
     gong(t+3.6,.35);[[3.7,[293.7,370,440,587.3,740]],[4.1,[146.8,293.7,440,587.3,880,1174.7]]].forEach(([d,fs],k)=>brass(fs,t+d,k?3:.35,.05));
   }
+  function midFanfare(){const t=ac().currentTime+.05; // やや豪華用の短いファンファーレ（約2秒）
+    timp(73.4,t,.8);[[0,[392,493.9,587.3]],[.15,[392,493.9,587.3]],[.3,[440,554.4,659.3]]].forEach(([d,fs])=>brass(fs,t+d,.13,.06));
+    timp(55,t+.5,.9);brass([523.3,659.3,784,1046.5],t+.5,1.1,.06);crash(t+.5,.22,1.1);
+    [1568,2093,2637].forEach((f,i)=>note(f,t+.55+i*.06,.5,"sine",.07));}
   function grandFanfare(){const c=ac(),t=c.currentTime+.05;
     [[0,[329.6,659.3],.11],[.13,[329.6,659.3],.11],[.26,[329.6,659.3],.11],[.4,[220,277.2,329.6,440],.55],
      [1.0,[246.9,329.6,415.3,493.9],.3],[1.33,[277.2,370,440,554.4],.3],[1.7,[110,220,277.2,329.6,440,554.4,659.3],3.4]]
@@ -1197,7 +1201,7 @@ const Music=(()=>{
       else if(fx==="mid"){timp(73.4,t,.7);brass([293.7,370,440,587.3],t,.45,.05);note(1760,t+.02,.35,"sine",.1);}
       else if(fx==="grand"){timp(55,t,1);crash(t,.35,2.5);brass([220,277.2,329.6,440],t,.6,.05);}
       else{note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}}catch(e){}},
-    fanfare(fx){if(!on)return;try{if(fx==="grand"||fx==="mid"){grandFanfare();return}if(fx==="revival"){revivalFanfare();return}const t=ac().currentTime+.05;
+    fanfare(fx){if(!on)return;try{if(fx==="grand"){grandFanfare();return}if(fx==="mid"){midFanfare();return}if(fx==="revival"){revivalFanfare();return}const t=ac().currentTime+.05;
       const seq=fx==="mid"?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
       seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(fx==="mid")crash(t+.5,.2,1.5);}catch(e){}},
     toggle(){on=!on;if(!on)this.stop();return on},
@@ -1260,7 +1264,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-2";
+const PAGE_VERSION="商品名版 11/02-3";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
