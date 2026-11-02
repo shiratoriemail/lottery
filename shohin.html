@@ -328,9 +328,12 @@ body.remoteSetup #rsBackB{display:inline-block!important}
 /* リモコンでは裏で動く抽選画面の全画面表示（スクロール禁止）を効かせない */
 html:has(body.remoteMode),body.remoteMode,body.remoteMode.noscroll{overflow:auto!important;height:auto}
 #remote{max-width:560px;margin:0 auto;display:grid;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 170px)}
-.rmBar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;gap:6px;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(18,16,28,.97);border-top:1px solid var(--line);box-shadow:0 -10px 24px rgba(0,0,0,.5);}
+.rmBar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;gap:6px;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:#12101c;border-top:1px solid var(--line);box-shadow:0 -10px 24px rgba(0,0,0,.5);isolation:isolate;}
 .rmBar>*{max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
 #rmMain{font-size:1.45rem;padding:20px 16px;min-height:72px;touch-action:manipulation}
+.rmRow{display:flex;gap:8px;align-items:stretch}.rmRow #rmMain{flex:1;min-width:0}
+.rmPhotoX{flex:none;width:68px;padding:4px;font-size:.72rem;line-height:1.25;font-weight:700;color:var(--muted);background:var(--bg);border-color:var(--line)}
+.rmPhotoX:disabled{opacity:.25}
 .rmHint{margin:0;text-align:center;font-size:.85rem;color:var(--fg)}
 #remote .btn{touch-action:manipulation}
 .rmTop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
@@ -613,7 +616,7 @@ body.screenMode #log{display:none}
   <button class="btn small" id="rmRedo" type="button">この賞を引き直す</button>
   <button class="btn small" id="rmReset" type="button">最初からやり直す（全結果を消す）</button>
   <p class="note">設定の変更は <a href="?">通常の画面</a> で行います（変更は数秒で映す画面にも反映されます）。</p>
-  <div class="rmBar"><p class="rmHint" id="rmHint"></p><button class="btn rmBig" id="rmMain" type="button" disabled>…</button></div>
+  <div class="rmBar"><p class="rmHint" id="rmHint"></p><div class="rmRow"><button class="btn rmBig" id="rmMain" type="button" disabled>…</button><button class="btn rmPhotoX" id="rmPhotoX" type="button" disabled>写真を<br>閉じる</button></div></div>
 </section>
 <div id="screenGate" hidden>
   <div>
@@ -1264,7 +1267,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-3";
+const PAGE_VERSION="商品名版 11/02-4";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1584,7 +1587,7 @@ const Duo=(()=>{
   async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;screens=j.screens||0;render();}
     catch(e){conn("off","サーバーに接続できません（起動に最大1分）");}}
   const conn=(k,t)=>{const c=$("rmConn");c.dataset.kind=k;c.textContent=t};
-  const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset","rmMain"];
+  const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset","rmMain","rmPhotoX"];
   function render(){
     const alive=st&&age!=null&&age<6;
     if(!alive){conn("off",st?`映す画面からの応答がありません（${Math.round(age||0)}秒）`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
@@ -1616,7 +1619,7 @@ const Duo=(()=>{
     if(!resetArm)set("rmReset",!st.setup);
     const pl=$("rmPlan"),cur=pl.value,opts=`<option value="">新しく入力する</option>`+st.plans.map(q=>`<option value="${esc(q.id)}">${esc(q.t)}・${q.c}名</option>`).join("");
     if(pl.dataset.o!==opts){pl.dataset.o=opts;pl.innerHTML=opts;pl.value=st.plans.some(q=>q.id===cur)?cur:(st.plans[0]?st.plans[0].id:"");pl.onchange();}
-    mainBtn(pend);
+    mainBtn(pend);$("rmPhotoX").disabled=pend||!st.photo;
     if(pend)["rmDraw","rmNext","rmPrev","rmRedo","rmReset"].forEach(b=>$(b).disabled=true);
     $("rmRail").innerHTML=st.rail.map(r=>`<div class="${r.cur?"cur":""} ${r.d?"d":""}"><span>${esc(r.t)}</span><span>${r.c}名${r.d?"・済":""}</span></div>`).join("");}
   let mainAct=null,mainArg;
@@ -1631,7 +1634,8 @@ const Duo=(()=>{
     else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint="";}
     b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;mainArg=arg;h.textContent=hint;}
   function startRemote(){
-    $("rmMain").onclick=()=>{if(mainAct)send(mainAct,mainArg)};document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
+    $("rmMain").onclick=()=>{if(mainAct)send(mainAct,mainArg)};
+    $("rmPhotoX").onclick=()=>send("photo",false);document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
     $("rmStart").onclick=()=>send("start");
     $("rmDraw").onclick=()=>send("draw");$("rmNext").onclick=()=>send("next");$("rmPrev").onclick=()=>send("prev");
     $("rmGrand").onclick=()=>send("grandClose");$("rmReplay").onclick=()=>send("replay");
