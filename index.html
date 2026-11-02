@@ -235,7 +235,6 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 #pvLabel{font-family:var(--display);font-size:clamp(1.4rem,4vw,2.6rem);color:var(--gold)}
 #pvName{font-family:var(--display);font-size:clamp(1.2rem,3.4vw,2.2rem);color:var(--fg)}
 #photoClose{cursor:pointer}
-body.screenMode #sumClose{display:none}
 @media (prefers-reduced-motion:reduce){#photoImg{animation:none}}
 /* 1等 suspense on stage */
 #stage.suspense{animation:glow 1s ease-in-out infinite alternate}
@@ -363,8 +362,15 @@ html:has(body.remoteMode),body.remoteMode,body.remoteMode.noscroll{overflow:auto
 .rmRail .d{color:var(--muted)}
 .rmMsg{font-size:.9rem;color:var(--muted);min-height:1.4em;text-align:center;margin:0}
 .rmMsg.pend{color:var(--gold)}
-body.screenMode .topbar,body.screenMode #stage .controls,body.screenMode .extraWrap{opacity:0;transition:opacity .3s}
-body.screenMode .topbar:hover,body.screenMode #stage .controls:hover,body.screenMode .extraWrap:hover,body.screenMode .topbar:focus-within,body.screenMode #stage .controls:focus-within{opacity:1}
+body.screenMode #stage .controls,body.screenMode .extraWrap{opacity:0;transition:opacity .3s}
+body.screenMode #stage .controls:hover,body.screenMode .extraWrap:hover,body.screenMode #stage .controls:focus-within{opacity:1}
+/* 映す画面：設定・閉じるなどのボタンは隠し、カーソルを右上に当てたときだけ出す */
+body.screenMode .topbar,body.screenMode #grandClose,body.screenMode #sbClose,body.screenMode #sumClose{opacity:0!important;pointer-events:none;transition:opacity .25s;animation:none!important}
+body.screenMode.cornerOn .topbar,body.screenMode.cornerOn #grandClose,body.screenMode.cornerOn #sbClose,body.screenMode.cornerOn #sumClose{opacity:1!important;pointer-events:auto}
+body.screenMode #sbClose{left:auto;right:clamp(12px,2vw,28px);top:calc(clamp(10px,2vh,24px) + 2.6em)}
+body.screenMode #sumClose{position:fixed;top:12px;right:16px;z-index:5}
+/* 映す画面：マウスを動かしていないときはカーソルを消す */
+body.screenMode:not(.cursorOn),body.screenMode:not(.cursorOn) *{cursor:none!important}
 body.screenMode #log{display:none}
 #screenGate{position:fixed;inset:0;z-index:80;background:rgba(8,6,15,.94);display:grid;place-items:center;padding:16px;text-align:center}
 #screenGate>div{max-width:560px;display:grid;gap:14px;justify-items:center}
@@ -1234,7 +1240,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="11/02-4";
+const PAGE_VERSION="11/02-5";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1571,6 +1577,12 @@ const Duo=(()=>{
     // ブラウザの全画面が解除されていたら、画面のどこかをクリックしたときに全画面に戻す
     document.addEventListener("click",()=>{if(!ready)return;try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement&&!document.webkitFullscreenElement)f.call(d).catch?.(()=>{})}catch(e){}});
     document.addEventListener("visibilitychange",async()=>{if(document.visibilityState==="visible"&&ready){try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}Sync.pull();}});
+    let cursorTimer=null;
+    const onMove=e=>{const b=document.body,corner=e.clientX>innerWidth-320&&e.clientY<160;
+      b.classList.add("cursorOn");b.classList.toggle("cornerOn",corner);clearTimeout(cursorTimer);
+      if(!corner)cursorTimer=setTimeout(()=>b.classList.remove("cursorOn","cornerOn"),2500);}; // 右上にある間は出したまま
+    document.addEventListener("mousemove",onMove);document.addEventListener("mousedown",onMove);
+    document.addEventListener("mouseleave",()=>document.body.classList.remove("cornerOn"));
     startClock();}
 
   /* ===== リモコン ===== */
