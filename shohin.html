@@ -426,6 +426,7 @@ body.screenMode #log{display:none}
         <p class="note" id="shareInfo">確認中…</p>
         <div class="controls" style="justify-content:flex-start">
           <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
+          <button class="btn small" id="reloadImgs" type="button">写真を共有サーバーから読み込み直す</button>
         </div>
         <p class="note" id="shareMsg"></p>
       </div>
@@ -631,7 +632,7 @@ const T=p=>p?(p.name||p.label||""):""; // 画面に出す名前＝商品名
 function rankSize(el,t){const n=[...(t||"")].length;el.style.fontSize=n<=6?"":`min(${(84/n).toFixed(1)}vw,${Math.max(1.6,40/n).toFixed(2)}rem)`;}
 const apiPath=p=>p.replace("/api/","/api/ns/shohin/"); // 共有サーバーの保存先（商品名表示版は別）
 const dispTitle=p=>T(p); // 画面に出す賞の名前
-const FX={grand:"豪華（金色）",revival:"敗者復活スペシャル（赤・炎）",mid:"やや豪華",normal:"通常"};
+const FX={grand:"豪華（金色）",revival:"敗者復活スペシャル（赤・炎）",mid:"やや豪華（豪華な音楽・発表画面なし）",normal:"通常"};
 const isBig=fx=>fx==="grand"||fx==="revival"; // カウントダウン＋全画面発表あり
 const BOARD={on:"全画面で表示（標準）",off:"全画面にしない"};
 const boardOptions=sel=>Object.entries(BOARD).map(([k,v])=>`<option value="${k}" ${(sel==="off"?"off":"on")===k?"selected":""}>${v}</option>`).join("");
@@ -669,6 +670,11 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}if(sy
 const $=id=>document.getElementById(id);
 const IMGKEY=id=>"shohin-img-"+id;
 function getImg(id){try{return localStorage.getItem(IMGKEY(id))||""}catch(e){return ""}}
+// 写真の版：写真を選び直すたびに新しい番号（時刻）を付け、各端末は番号が変わったら取り直す
+const IMGVKEY=id=>IMGKEY(id)+"-v";
+function getImgV(id){try{return localStorage.getItem(IMGVKEY(id))||""}catch(e){return ""}}
+function setImgV(id,v){try{v?localStorage.setItem(IMGVKEY(id),String(v)):localStorage.removeItem(IMGVKEY(id))}catch(e){}}
+function markPhoto(q,on){q.img=on;q.imgv=Date.now();setImgV(q.id,on?q.imgv:"");}
 function setImg(id,d){try{d?localStorage.setItem(IMGKEY(id),d):localStorage.removeItem(IMGKEY(id));return true}catch(e){return false}}
 function imgSrc(id){const d=getImg(id);if(d)return d;const i=posOf(id);return i<0?"":`prize${i+1}.jpg`}
 function resizeFile(file){return new Promise((ok,ng)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
@@ -758,20 +764,20 @@ $("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");i
   if(d.up&&i>0)[S.prizes[i-1],S.prizes[i]]=[S.prizes[i],S.prizes[i-1]];
   else if(d.down&&i<S.prizes.length-1)[S.prizes[i+1],S.prizes[i]]=[S.prizes[i],S.prizes[i+1]];
   else if(d.rm&&!anyDrawn())S.prizes.splice(i,1);
-  else if(d.del){setImg(id,"");const q=prizeOf(id);if(q)q.img=false;Sync.delImg(id);}
+  else if(d.del){setImg(id,"");const q=prizeOf(id);if(q)markPhoto(q,false);Sync.delImg(id);}
   if(!anyDrawn()){S.order=drawOrder();S.idx=0}
   save();renderSetup();});
 $("planRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
   const d=b.dataset;
   if(d.rmplan){const i=S.extras.findIndex(q=>q.id===d.rmplan&&q.planned);if(i>=0){S.extras.splice(i,1);setImg(d.rmplan,"");Sync.delImg(d.rmplan);}}
-  else if(d.del){setImg(d.del,"");const q=prizeOf(d.del);if(q)q.img=false;Sync.delImg(d.del);}
+  else if(d.del){setImg(d.del,"");const q=prizeOf(d.del);if(q)markPhoto(q,false);Sync.delImg(d.del);}
   save();renderSetup();});
 async function onPhotoInput(e){const inp=e.target;if(inp.type!=="file")return;const f=inp.files[0];if(!f)return;readForm();
   const id=inp.dataset.id;let d;
   try{d=await resizeFile(f);if(!setImg(id,d)){msg("写真を保存できませんでした。容量オーバーの可能性があります。小さめの写真でお試しください。");return}}
   catch(err){msg("この写真は読み込めませんでした。JPEGかPNGの画像を選んでください。");return}
   renderSetup();$("setupMsg").textContent="写真を共有サーバーに保存中…";
-  try{await Sync.putImg(id,d);const q=prizeOf(id);if(q){q.img=true;save();}$("setupMsg").textContent="写真を保存しました。他の端末でも表示されます。";}
+  try{await Sync.putImg(id,d);const q=prizeOf(id);if(q){markPhoto(q,true);save();Sync.flush();}$("setupMsg").textContent="写真を保存しました。他の端末でも数秒で切り替わります。";}
   catch(err){msg("写真をサーバーに保存できませんでした。この端末には表示されます。通信状態を確認して、もう一度選び直してください。");}}
 $("prizeRows").addEventListener("change",onPhotoInput);
 $("planRows").addEventListener("change",onPhotoInput);
@@ -799,8 +805,8 @@ $("importBtn").onclick=async()=>{if(anyDrawn()||importing)return;const b=$("impo
     const withImg=[...S.prizes,...S.extras].filter(q=>q.img);let ok=0,ng=0;
     for(const q of withImg){m.textContent=`写真を取り込み中… ${ok+ng+1}/${withImg.length}`;
       try{const d=(await get("/api/img/"+q.id,30000)).data;try{localStorage.setItem(IMGKEY(q.id),d)}catch(e){}
-        await Sync.putImg(q.id,d);ok++;}catch(e){ng++;}}
-    renderSetup();
+        await Sync.putImg(q.id,d);markPhoto(q,true);ok++;}catch(e){ng++;}}
+    save();Sync.flush();renderSetup();
     m.textContent=`元のシステムから ${S.prizes.length}賞${S.extras.length?"・追加抽選の準備 "+S.extras.length+"件":""}・写真 ${ok}枚を取り込みました。`+(ng?`（写真 ${ng}枚は取り込めませんでした。設定画面で選び直してください）`:"")+"賞名は画面に出ないので、商品名の欄を確認してください。";
   }catch(e){m.textContent="取り込めませんでした："+((e&&e.name==="AbortError")?"時間切れ（もう一度押してください）":(e&&e.message)||"通信できません");}
   finally{importing=false;b.textContent=IMPORT_LABEL;renderSetup();}
@@ -985,7 +991,7 @@ $("exCopy").onchange=()=>{const id=$("exCopy").value;if(id){exPhoto=getImg(id);e
 $("exNoPhoto").onclick=()=>{exPhoto="";exPhotoUI();};
 async function attachPhoto(id,data,msgEl){ // 写真をこの端末と共有サーバーに保存
   if(!setImg(id,data)){if(msgEl)msgEl.innerHTML=`<span class="err">写真を保存できませんでした。小さめの写真でお試しください。</span>`;return false}
-  try{await Sync.putImg(id,data);const q=prizeOf(id);if(q){q.img=true;save();}return true}
+  try{await Sync.putImg(id,data);const q=prizeOf(id);if(q){markPhoto(q,true);save();Sync.flush();}return true}
   catch(e){if(msgEl)msgEl.innerHTML=`<span class="err">写真を共有サーバーに保存できませんでした。この端末には表示されます。</span>`;return false}
 }
 let exPlanId="";
@@ -1183,14 +1189,15 @@ const Music=(()=>{
     [1318.5,1760,2217.5,2637,3520].forEach((f,i)=>note(f,t+4.2+i*.06,1.2,"sine",.06));
   }
   return{
-    start(fx,sec){if(!on)return;try{fx==="grand"?grandRoll(sec):fx==="revival"?revivalRoll(sec):startLoop(fx==="mid")}catch(e){}},
+    start(fx,sec){if(!on)return;try{(fx==="grand"||fx==="mid")?grandRoll(sec):fx==="revival"?revivalRoll(sec):startLoop(fx==="mid")}catch(e){}},
     count(n,fx){if(!on)return;try{const t=ac().currentTime;if(fx==="revival"){timp(49,t,1);timp(49,t+.2,.6);if(n===1)gong(t+.02,.4);return;}timp(n===1?110:82.4,t,.9);noise(t,.6,.12,2500,"highpass");if(n===1)crash(t+.02,.2,1.2);}catch(e){}},
     stop(){clearInterval(loop);loop=null;if(bus&&ctx){const b=bus,n=ctx.currentTime;b.gain.cancelScheduledValues(n);b.gain.setValueAtTime(b.gain.value,n);b.gain.linearRampToValueAtTime(0,n+.12);setTimeout(()=>{try{b.disconnect()}catch(e){}},400);}bus=null},
     ding(fx){if(!on)return;try{const t=ac().currentTime;
       if(fx==="revival"){gong(t,.45);brass([146.8,220,293.7],t,.7,.05);}
+      else if(fx==="mid"){timp(73.4,t,.7);brass([293.7,370,440,587.3],t,.45,.05);note(1760,t+.02,.35,"sine",.1);}
       else if(fx==="grand"){timp(55,t,1);crash(t,.35,2.5);brass([220,277.2,329.6,440],t,.6,.05);}
       else{note(1318,t,.25,"sine",.25);note(1976,t+.03,.3,"sine",.12)}}catch(e){}},
-    fanfare(fx){if(!on)return;try{if(fx==="grand"){grandFanfare();return}if(fx==="revival"){revivalFanfare();return}const t=ac().currentTime+.05;
+    fanfare(fx){if(!on)return;try{if(fx==="grand"||fx==="mid"){grandFanfare();return}if(fx==="revival"){revivalFanfare();return}const t=ac().currentTime+.05;
       const seq=fx==="mid"?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
       seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(fx==="mid")crash(t+.5,.2,1.5);}catch(e){}},
     toggle(){on=!on;if(!on)this.stop();return on},
@@ -1253,7 +1260,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 10/30-6";
+const PAGE_VERSION="商品名版 11/02-1";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1310,12 +1317,14 @@ const Sync=(()=>{
   function rebase(server){
     let m;try{m=migrate(JSON.parse(JSON.stringify(server)))}catch(e){return null}
     const add=Object.keys(S.results).filter(id=>!m.results[id]&&!known.has(id)&&S.results[id].length); // 前回の同期より後に、この端末で出した結果だけ
-    if(!add.length)return null;
+    let pics=false; // この端末で選び直した（新しい版の）写真の印も残す
+    [...m.prizes,...m.extras].forEach(q=>{const l=prizeOf(q.id);if(l&&(Number(l.imgv)||0)>(Number(q.imgv)||0)){q.img=l.img;q.imgv=l.imgv;pics=true}});
+    if(!add.length&&!pics)return null;
     const taken=new Set(Object.values(m.results).flat());
     S.extras.forEach(q=>{if(!m.extras.some(x=>x.id===q.id))m.extras.push(JSON.parse(JSON.stringify(q)))});
     S.order.forEach((id,i)=>{if(!m.order.includes(id))m.order.splice(Math.min(i,m.order.length),0,id)});
     add.forEach(id=>{if(S.results[id].every(n=>!taken.has(n)))m.results[id]=S.results[id].slice()});
-    m.started=true;const cur=S.order[S.idx];const k=m.order.indexOf(cur);m.idx=k>=0?k:S.idx;
+    if(add.length)m.started=true;const cur=S.order[S.idx];const k=m.order.indexOf(cur);m.idx=k>=0?k:S.idx;
     return m;}
   function askChoice(j){
     // 映す画面・リモコン・結果表示の端末は、迷わず共有サーバーの内容を使う
@@ -1343,13 +1352,22 @@ const Sync=(()=>{
     }catch(e){reached=false;lastErr=errText(e);status("off","サーバーに接続できません（この端末に保存中）");}
     finally{busy=false;first=false;info();}
     if(next)await next();
-    if(reached&&!imgsChecked){imgsChecked=true;uploadLocalImgs();}
+    if(reached&&!imgsChecked){imgsChecked=true;fetchImgs().then(uploadLocalImgs);}
   }
-  async function fetchImgs(){let got=false;
-    for(const p of [...S.prizes,...S.extras]){if(p.img&&!getImg(p.id)){try{const r=await call("/api/img/"+p.id,{},30000);if(r.ok){const j=await r.json();try{localStorage.setItem(IMGKEY(p.id),j.data);got=true}catch(e){}}}catch(e){}}}
-    if(got&&!spinning)refreshAll();}
-  async function uploadLocalImgs(){ // この端末にだけある写真をサーバーへ
-    for(const p of [...S.prizes,...S.extras]){const d=getImg(p.id);if(d&&!p.img){try{await putImg(p.id,d);p.img=true;save();}catch(e){}}}}
+  let fetching=false;
+  async function fetchImgs(force){if(fetching)return;fetching=true;let got=false;
+    try{for(const p of [...S.prizes,...S.extras]){
+      const v=p.imgv?String(p.imgv):"";
+      if(!p.img){if(v&&getImg(p.id)&&getImgV(p.id)!==v){setImg(p.id,"");setImgV(p.id,"");got=true}continue} // 他の端末で外された写真
+      if(force||!getImg(p.id)||(v&&getImgV(p.id)!==v)){
+        try{const r=await call("/api/img/"+p.id,{},30000);if(r.ok){const j=await r.json();if(setImg(p.id,j.data)){setImgV(p.id,v);got=true}}}catch(e){}}}}
+    finally{fetching=false}
+    if(got&&!spinning)refreshAll();return got;}
+  async function uploadLocalImgs(){ // この端末にだけある写真（送れなかった写真）をサーバーへ。サーバーに写真があれば上書きしない
+    for(const p of [...S.prizes,...S.extras]){const d=getImg(p.id);if(!d||p.img||p.imgv)continue;
+      try{const r=await call("/api/img/"+p.id,{},30000);
+        if(r.status===404){await putImg(p.id,d);markPhoto(p,true);save();}
+        else if(r.ok){const j=await r.json();setImg(p.id,j.data);p.img=true;save();}}catch(e){}}}
   async function putImg(id,data){const r=await call("/api/img/"+id,{method:"PUT",body:JSON.stringify({data})});if(!r.ok)throw new Error(r.status)}
   async function delImg(id){try{await call("/api/img/"+id,{method:"DELETE"})}catch(e){}}
   async function sendNow(m){ // この端末の内容でサーバーを上書き（＝全端末に反映）
@@ -1375,6 +1393,8 @@ const Sync=(()=>{
     await sendNow($("setupMsg"));
     b.disabled=false;b.textContent="設定を全端末に反映する";};
   $("loadNow").onclick=()=>loadNow();
+  $("reloadImgs").onclick=async()=>{const m=$("shareMsg");m.textContent="写真を読み込み直しています…";
+    const got=await fetchImgs(true);renderSetup();m.textContent=got?"写真を共有サーバーの最新のものに読み込み直しました。":"写真を読み込めませんでした（共有サーバーに写真が無いか、通信できません）。";};
   el.onclick=()=>{first=false;pull();};
   syncHook=schedule;
   // 当選結果はすぐ保存（待たずに送る）
