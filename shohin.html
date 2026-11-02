@@ -636,6 +636,7 @@ body.screenMode #log{display:none}
 const KEY="shohin-roulette-v1";
 const T=p=>p?(p.name||p.label||""):""; // 画面に出す名前＝商品名
 function rankSize(el,t){const n=[...(t||"")].length;el.style.fontSize=n<=6?"":`min(${(84/n).toFixed(1)}vw,${Math.max(1.6,40/n).toFixed(2)}rem)`;}
+const IS_SCREEN=(()=>{try{return new URLSearchParams(location.search).get("role")==="screen"}catch(e){return false}})(); // 映す画面か
 const apiPath=p=>p.replace("/api/","/api/ns/shohin/"); // 共有サーバーの保存先（商品名表示版は別）
 const dispTitle=p=>T(p); // 画面に出す賞の名前
 const FX={grand:"豪華（金色）",revival:"敗者復活スペシャル（赤・炎）",mid:"やや豪華（豪華な音楽・発表画面なし）",normal:"通常"};
@@ -872,7 +873,7 @@ function prepareStage(){
 /* ---------- 全画面ボード ---------- */
 const BOARD_MIN=15; // これより人数が多い賞は全画面で番号を大きく表示
 let boardOff=false;
-function wantBoard(p){return p.board!=="off";} // 標準はすべての賞で全画面
+function wantBoard(p){return IS_SCREEN||p.board!=="off";} // 標準はすべての賞で全画面（映す画面は賞の設定にかかわらず常に全画面）
 function setBoard(on){
   const st=$("stage"),has=$("balls").children.length>0;
   on=on&&!boardOff&&has;st.classList.toggle("board",on);document.body.classList.toggle("noscroll",on);
@@ -1270,7 +1271,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-8";
+const PAGE_VERSION="商品名版 11/02-9";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1578,6 +1579,8 @@ const Duo=(()=>{
     $("gateGo").onclick=async()=>{Music.unlock();ready=true;claim=Date.now()/1000;$("screenGate").hidden=true;Standby.show();
       try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
       try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}};
+    // ブラウザの全画面が解除されていたら、画面のどこかをクリックしたときに全画面に戻す
+    document.addEventListener("click",()=>{if(!ready)return;try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement&&!document.webkitFullscreenElement)f.call(d).catch?.(()=>{})}catch(e){}});
     document.addEventListener("visibilitychange",async()=>{if(document.visibilityState==="visible"&&ready){try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}Sync.pull();}});
     screenLoop();}
 
