@@ -235,6 +235,7 @@ body.noscroll .topbar{position:fixed;z-index:35;left:16px;right:16px;top:calc(en
 #pvLabel{font-family:var(--display);font-size:clamp(1.4rem,4vw,2.6rem);color:var(--gold)}
 #pvName{font-family:var(--display);font-size:clamp(1.2rem,3.4vw,2.2rem);color:var(--fg)}
 #photoClose{cursor:pointer}
+body.screenMode #sumClose{display:none}
 @media (prefers-reduced-motion:reduce){#photoImg{animation:none}}
 /* 1等 suspense on stage */
 #stage.suspense{animation:glow 1s ease-in-out infinite alternate}
@@ -427,6 +428,7 @@ body.screenMode #log{display:none}
         <div class="controls" style="justify-content:flex-start">
           <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
           <button class="btn small" id="reloadImgs" type="button">写真を共有サーバーから読み込み直す</button>
+          <button class="btn small" id="resyncAll" type="button">つながっている全端末をそろえる</button>
         </div>
         <p class="note" id="shareMsg"></p>
       </div>
@@ -599,6 +601,7 @@ body.screenMode #log{display:none}
     <button class="btn" id="rmSummary" type="button">結果一覧を映す</button>
     <button class="btn" id="rmBoard" type="button">全画面の切り替え</button>
     <button class="btn" id="rmSound" type="button">音を消す</button>
+    <button class="btn" id="rmResync" type="button">全端末をそろえる</button>
   </div>
   <details class="rmExtra">
     <summary>追加抽選（敗者復活など）</summary>
@@ -1230,7 +1233,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="11/02-1";
+const PAGE_VERSION="11/02-2";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1372,7 +1375,11 @@ const Sync=(()=>{
   // ページを閉じる・再読み込みする瞬間に、まだ送っていない変更を送る
   addEventListener("pagehide",()=>{if(!dirty||choosing)return;
     try{fetch(API_BASE+apiPath("/api/state"),{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({rev,state:S})})}catch(e){}});
-  return {pull,putImg,delImg,fetchImgs,info,sendNow,flush};
+  // 共有サーバーの内容と写真を、この端末に取り直す（未送信の変更は捨てる）
+  async function forceSync(){if(spinning)return false;
+    try{const r=await call("/api/state");if(!r.ok)throw new Error(r.status);const j=await r.json();if(j.state){$("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);}}catch(e){return false}
+    await fetchImgs(true);return true;}
+  return {pull,putImg,delImg,fetchImgs,info,sendNow,flush,forceSync};
 })();
 
 /* ---------- 結果一覧 ---------- */
@@ -1422,6 +1429,13 @@ document.addEventListener("click",e=>{const img=e.target.closest&&e.target.close
 $("photoView").addEventListener("click",closePhoto);
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("photoView").hidden){e.stopImmediatePropagation();closePhoto();}},true);
 
+/* ---------- 全端末をそろえる ---------- */
+async function resyncAll(m){m=m||$("shareMsg");m.textContent="全端末に、共有サーバーの最新の設定・結果・写真を読み込み直すよう送っています…";
+  try{const r=await fetch(API_BASE+apiPath("/api/cmd"),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"resync"})});
+    if(!r.ok)throw new Error("サーバーエラー "+r.status);await Sync.forceSync();
+    m.textContent="全端末に送りました。数秒で、映す画面・結果表示・リモコンが共有サーバーの最新の状態にそろいます。";}
+  catch(e){m.textContent="送れませんでした："+(e.message||"通信できません");}}
+$("resyncAll").onclick=()=>resyncAll();
 /* ---------- boot ---------- */
 renderSetup();
 if(S.started)showMain();
@@ -1516,6 +1530,8 @@ const Duo=(()=>{
       case "photo":if(arg){const im=$("reveal").querySelector("img");if(im)openPhoto(im)}else closePhoto();break;
       case "sound":if(!!arg!==$("soundBtn").textContent.includes("あり"))$("soundBtn").click();break;
       case "extra":runExtra(arg||{});break;
+      case "resync":if(spinning)break;Grand.hide();Summary.hide();closePhoto();$("stage").classList.remove("suspense","revive");
+        Sync.forceSync().then(()=>{if(typeof autoPhoto==="function")autoPhoto()});exMsg="全端末をそろえました。";break;
       case "reset":if(spinning){drawToken++;spinning=false;Music.stop();$("countdown").hidden=true;$("countdown").innerHTML="";$("drawBtn").disabled=false;$("extraBtn").disabled=false;}Music.stop();Grand.hide();Summary.hide();Standby.hide();closePhoto();$("stage").classList.remove("suspense","revive");
         clearDraw();S.started=true;save();$("setupBtn").textContent="設定";showMain();if(typeof autoPhoto==="function")autoPhoto();
         Standby.show();exMsg="最初からやり直しました。待ち受け画面を映しています。";break;}
@@ -1540,12 +1556,12 @@ const Duo=(()=>{
     screenLoop();}
 
   /* ===== リモコン ===== */
-  let st=null,age=null,screens=0,sent=0,sentAt=0,redoArm=null,resetArm=null;
+  let lastResync=0,st=null,age=null,screens=0,sent=0,sentAt=0,redoArm=null,resetArm=null;
   const msg=(t,pend)=>{const m=$("rmMsg");m.textContent=t;m.classList.toggle("pend",!!pend)};
   async function send(action,arg){
     sentAt=Date.now();sent=-1;if(st)render();try{const j=await post("/api/cmd",{action,arg});sent=j.seq;sentAt=Date.now();msg("映す画面に送りました…",true);setTimeout(pull,250);}
     catch(e){sent=0;msg("送れませんでした："+((e&&e.name==="AbortError")?"時間切れ":e.message));if(st)render();}}
-  async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;screens=j.screens||0;render();}
+  async function pull(){try{const j=await fetchJ("/api/screen");st=j.status;age=j.age;screens=j.screens||0;if(j.resync&&lastResync&&j.resync>lastResync)Sync.forceSync();if(j.resync)lastResync=j.resync;else if(!lastResync)lastResync=1;render();}
     catch(e){conn("off","サーバーに接続できません（起動に最大1分）");}}
   const conn=(k,t)=>{const c=$("rmConn");c.dataset.kind=k;c.textContent=t};
   const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset","rmMain"];
@@ -1601,6 +1617,7 @@ const Duo=(()=>{
     $("rmGrand").onclick=()=>send("grandClose");$("rmReplay").onclick=()=>send("replay");
     $("rmPhotoBtn").onclick=()=>send("photo",!(st&&st.photo));$("rmStandby").onclick=()=>send("standby",!(st&&st.standby));
     $("rmSummary").onclick=()=>send("summary",!(st&&st.summary));$("rmBoard").onclick=()=>send("board");
+    $("rmResync").onclick=()=>{msg("全端末をそろえています…",true);resyncAll($("rmMsg"));};
     $("rmSound").onclick=()=>send("sound",!(st&&st.sound));
     $("rmPlan").onchange=()=>{const q=st&&st.plans.find(x=>x.id===$("rmPlan").value);$("rmExLabelWrap").hidden=!!q;if(q)$("rmCount").value=q.c;};
     $("rmExGo").onclick=()=>{const plan=$("rmPlan").value;
@@ -1619,6 +1636,8 @@ const Duo=(()=>{
     const tick=()=>{const k=JSON.stringify([S.results,S.order,[...S.prizes,...S.extras].map(p=>[p.label,p.name,p.count,p.presenter,!!getImg(p.id)])]);
       if(!Summary.isOpen()||k!==last){last=k;Summary.show();}};
     tick();setInterval(tick,1000);setInterval(()=>Sync.pull(),2000);
+    let lastRs=0;const rsPoll=async()=>{try{const r=await fetch(API_BASE+apiPath("/api/screen"),{cache:"no-store"});const j=await r.json();
+      if(j.resync&&lastRs&&j.resync>lastRs){await Sync.forceSync();last="";}lastRs=j.resync||lastRs||1;}catch(e){}};rsPoll();setInterval(rsPoll,3000);
     document.addEventListener("click",async()=>{ // 1回タップすると全画面＋画面が暗くならないように
       try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
       try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}},{once:true});}

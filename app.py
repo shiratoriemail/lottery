@@ -277,7 +277,7 @@ def del_img(img_id, ns=""):
 
 # ---------- 2台運用（映す画面＋リモコン） ----------
 # リモコンの操作命令と、映す画面の状態をメモリに置く（保存はしない。再起動で消えてよい）
-ACTIONS = {"reset", "draw", "next", "prev", "redo", "grandClose", "replay", "standby", "summary",
+ACTIONS = {"resync", "reset", "draw", "next", "prev", "redo", "grandClose", "replay", "standby", "summary",
            "board", "photo", "extra", "start", "sound"}
 remote_lock = threading.Lock()
 remotes = {}  # 保存先ごと: {"seq", "cmds", "screens": {画面ID: {"status","ts","claim"}}}
@@ -308,6 +308,8 @@ def post_cmd(ns=""):
     with remote_lock:
         r = remote_of(d)
         r["seq"] += 1
+        if action == "resync":  # 全端末をそろえる：結果表示・リモコンにも知らせる
+            r["resync"] = time.time()
         r["cmds"].append({"seq": r["seq"], "action": action, "arg": body.get("arg"), "ts": time.time()})
         r["cmds"] = r["cmds"][-50:]
         return jsonify({"seq": r["seq"]})
@@ -346,10 +348,10 @@ def get_screen(ns=""):
         lead, alive = leader_of(r, now)
         if lead is None:  # 動いている画面が無い：最後に連絡のあった画面を返す
             if not r["screens"]:
-                return jsonify({"seq": r["seq"], "status": None, "age": None, "screens": 0})
+                return jsonify({"seq": r["seq"], "status": None, "age": None, "screens": 0, "resync": r.get("resync", 0)})
             lead = max(r["screens"], key=lambda k: r["screens"][k]["ts"])
         v = r["screens"][lead]
-        return jsonify({"seq": r["seq"], "status": v["status"], "age": now - v["ts"], "screens": len(alive)})
+        return jsonify({"seq": r["seq"], "status": v["status"], "age": now - v["ts"], "screens": len(alive), "resync": r.get("resync", 0)})
 
 
 if __name__ == "__main__":
