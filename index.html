@@ -380,6 +380,7 @@ body.screenMode #sumClose{position:fixed;top:12px;right:16px;z-index:5}
 /* 映す画面：マウスを動かしていないときはカーソルを消す */
 body.screenMode:not(.cursorOn),body.screenMode:not(.cursorOn) *{cursor:none!important}
 body.screenMode #log{display:none}
+html:has(body.screenMode){scrollbar-width:none}html:has(body.screenMode)::-webkit-scrollbar,body.screenMode::-webkit-scrollbar{display:none;width:0;height:0}
 #screenGate{position:fixed;inset:0;z-index:80;background:rgba(8,6,15,.94);display:grid;place-items:center;padding:16px;text-align:center}
 #screenGate>div{max-width:560px;display:grid;gap:14px;justify-items:center}
 #screenGate h2{font-family:var(--display);font-weight:400;color:var(--gold);font-size:2rem;margin:0}
@@ -1263,7 +1264,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="11/02-9";
+const PAGE_VERSION="11/02-10";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
