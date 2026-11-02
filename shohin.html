@@ -434,7 +434,7 @@ body.screenMode #log{display:none}
         <div class="controls" style="justify-content:flex-start">
           <button class="btn small" id="loadNow" type="button">共有サーバーの設定を読み込む</button>
           <button class="btn small" id="reloadImgs" type="button">写真を共有サーバーから読み込み直す</button>
-          <button class="btn small" id="resyncAll" type="button">つながっている全端末をそろえる</button>
+          <button class="btn small" id="resyncAll" type="button">全端末をそろえて最初からやり直す</button>
         </div>
         <p class="note" id="shareMsg"></p>
       </div>
@@ -608,7 +608,7 @@ body.screenMode #log{display:none}
     <button class="btn" id="rmSummary" type="button">結果一覧を映す</button>
     <button class="btn" id="rmBoard" type="button">全画面の切り替え</button>
     <button class="btn" id="rmSound" type="button">音を消す</button>
-    <button class="btn" id="rmResync" type="button">全端末をそろえる</button>
+    <button class="btn" id="rmResync" type="button">全端末をそろえて最初からやり直す</button>
   </div>
   <details class="rmExtra">
     <summary>追加抽選（敗者復活など）</summary>
@@ -1275,7 +1275,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-12";
+const PAGE_VERSION="商品名版 11/02-13";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1477,12 +1477,21 @@ $("photoView").addEventListener("click",closePhoto);
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("photoView").hidden){e.stopImmediatePropagation();closePhoto();}},true);
 
 /* ---------- 全端末をそろえる ---------- */
-async function resyncAll(m){m=m||$("shareMsg");m.textContent="全端末に、共有サーバーの最新の設定・結果・写真を読み込み直すよう送っています…";
-  try{const r=await fetch(API_BASE+apiPath("/api/cmd"),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"resync"})});
-    if(!r.ok)throw new Error("サーバーエラー "+r.status);await Sync.forceSync();
-    m.textContent="全端末に送りました。数秒で、映す画面・結果表示・リモコンが共有サーバーの最新の状態にそろいます。";}
-  catch(e){m.textContent="送れませんでした："+(e.message||"通信できません");}}
-$("resyncAll").onclick=()=>resyncAll();
+// 全端末をそろえて最初からやり直す：①共有サーバーの最新を取り直す ②全結果を消して保存 ③映す画面を最初から（待ち受け）④他の端末も取り直す
+const RESYNC_LABEL="全端末をそろえて最初からやり直す";
+async function resyncAll(m){m=m||$("shareMsg");
+  const cmd=a=>fetch(API_BASE+apiPath("/api/cmd"),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:a})}).then(r=>{if(!r.ok)throw new Error("サーバーエラー "+r.status)});
+  m.textContent="共有サーバーの最新の設定を読み込み、全結果を消しています…";
+  try{await Sync.forceSync();clearDraw();S.started=true;save();
+    if(!(await Sync.sendNow(m)))throw new Error("共有サーバーに保存できませんでした");
+    await cmd("reset");await cmd("resync");
+    m.textContent="全結果を消して、全端末に送りました。数秒で、映す画面は待ち受け画面（最初から）に、結果表示とリモコンは最新の状態にそろいます。";return true}
+  catch(e){m.textContent="できませんでした："+(e.message||"通信できません")+"。もう一度押してください。";return false}}
+function armResync(b,run){ // 2回押しで実行（誤操作防止）
+  if(!b._armed){b.textContent="もう一度押すと、全結果を消して全端末をそろえます";b.classList.add("danger");
+    b._armed=setTimeout(()=>{b._armed=null;b.textContent=RESYNC_LABEL;b.classList.remove("danger")},5000);return}
+  clearTimeout(b._armed);b._armed=null;b.textContent=RESYNC_LABEL;b.classList.remove("danger");run();}
+$("resyncAll").onclick=()=>armResync($("resyncAll"),()=>resyncAll());
 /* ---------- boot ---------- */
 renderSetup();
 if(S.started)showMain();
@@ -1679,7 +1688,7 @@ const Duo=(()=>{
     $("rmGrand").onclick=()=>send("grandClose");$("rmReplay").onclick=()=>send("replay");
     $("rmPhotoBtn").onclick=()=>send("photo",!(st&&st.photo));$("rmStandby").onclick=()=>send("standby",!(st&&st.standby));
     $("rmSummary").onclick=()=>send("summary",!(st&&st.summary));$("rmBoard").onclick=()=>send("board");
-    $("rmResync").onclick=()=>{msg("全端末をそろえています…",true);resyncAll($("rmMsg"));};
+    $("rmResync").onclick=()=>armResync($("rmResync"),()=>{msg("全端末をそろえて、最初からやり直しています…",true);resyncAll($("rmMsg"));});
     $("rmSound").onclick=()=>send("sound",!(st&&st.sound));
     $("rmPlan").onchange=()=>{const q=st&&st.plans.find(x=>x.id===$("rmPlan").value);$("rmExLabelWrap").hidden=!!q;if(q)$("rmCount").value=q.c;};
     $("rmExGo").onclick=()=>{const plan=$("rmPlan").value;
