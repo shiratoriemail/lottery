@@ -952,7 +952,7 @@ $("redoBtn").onclick=()=>{const id=S.order[S.idx];if(spinning||!id||!S.results[i
   clearTimeout(redoArmed);redoArmed=null;b.textContent="この賞を引き直す";b.classList.remove("danger");
   delete S.results[id];save();renderRail();renderLog();prepareStage();
   $("sub").textContent=`${prizeOf(id).label}の結果を取り消しました。もう一度「ルーレット スタート」を押してください。`;};
-$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();if(S.order[S.idx]===undefined&&anyDrawn())Summary.show();};
+$("nextBtn").onclick=()=>{S.idx++;save();renderRail();prepareStage();if(S.order[S.idx]===undefined&&anyDrawn()&&!IS_SCREEN)Summary.show();};
 
 /* ---------- 追加抽選（敗者復活など） ---------- */
 $("exFx").innerHTML=fxOptions("revival");$("exBoard").innerHTML=boardOptions("on");
@@ -1240,7 +1240,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="11/02-5";
+const PAGE_VERSION="11/02-6";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
@@ -1643,7 +1643,8 @@ const Duo=(()=>{
     else if(st.grand){t="発表画面を閉じる";act="grandClose";hint="当選発表を映しています";}
     else if(st.canDraw){t="ルーレット スタート";cls+=" primary";act="draw";hint=st.photo?"写真を映しています。押すと写真を閉じて抽選します":"準備ができたら押してください";}
     else if(st.canNext){t=st.nextLabel||"次へ";cls+=" apply";act="next";hint="この賞は抽選済みです。次の賞へ進みます";}
-    else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint="";}
+    else if(!st.id&&st.canSummary&&!st.summary){t="結果一覧を映す";cls+=" apply";act="summary";arg=true;hint="すべての抽選が終わりました。押すと映す画面に結果一覧を全画面で出します";}
+    else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint=st.summary?"閉じるときは下の「結果一覧を閉じる」":"";}
     b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;mainArg=arg;h.textContent=hint;}
   function startRemote(){
     $("rmMain").onclick=()=>{if(mainAct)send(mainAct,mainArg)};document.body.classList.add("remoteMode");$("remote").hidden=false;document.title="リモコン｜"+document.title;
