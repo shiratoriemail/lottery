@@ -1271,7 +1271,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-9";
+const PAGE_VERSION="商品名版 11/02-10";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1457,11 +1457,12 @@ function openPhoto(img){
   $("pvLabel").textContent=img.dataset.label||"";$("pvName").textContent=img.dataset.name||"";
   $("photoView").hidden=false;$("photoClose").focus({preventScroll:true});
 }
+let photoSoon=false,photoTok=0; // 写真を大きく映す直前（読み込み中）。リモコンが一瞬赤い「スタート」を出さないように
 function autoPhoto(){const id=S.order[S.idx];if(!id||S.results[id]||spinning)return;
-  const im=$("reveal").querySelector("img");if(!im)return;
-  const go=()=>{if(S.order[S.idx]===id&&!spinning&&!S.results[id]&&im.isConnected&&im.naturalWidth)openPhoto(im)};
-  if(im.complete)go();else im.addEventListener("load",go,{once:true});}
-function closePhoto(){$("photoView").hidden=true;$("photoImg").removeAttribute("src");}
+  const im=$("reveal").querySelector("img");if(!im)return;const tk=photoTok;
+  const go=()=>{photoSoon=false;if(tk===photoTok&&S.order[S.idx]===id&&!spinning&&!S.results[id]&&im.isConnected&&im.naturalWidth)openPhoto(im)};
+  if(im.complete)go();else{photoSoon=true;im.addEventListener("load",go,{once:true});im.addEventListener("error",()=>{photoSoon=false},{once:true});setTimeout(()=>{photoSoon=false},8000);}}
+function closePhoto(){photoTok++;photoSoon=false;$("photoView").hidden=true;$("photoImg").removeAttribute("src");}
 document.addEventListener("click",e=>{const img=e.target.closest&&e.target.closest("img.prizeImg,img.g-img,img.thumb,img.sumImg");
   if(img&&img.src){e.preventDefault();e.stopPropagation();openPhoto(img);}});
 $("photoView").addEventListener("click",closePhoto);
@@ -1532,7 +1533,7 @@ const Duo=(()=>{
       winners:id&&S.results[id]?S.results[id].map(fmt):[],spinning,
       canDraw:vis("drawBtn")&&!$("drawBtn").disabled&&!spinning,canNext:vis("nextBtn")&&!spinning,nextLabel:$("nextBtn").textContent,
       canPrev:vis("prevBtn")&&!spinning,prevLabel:$("prevBtn").textContent,canRedo:vis("redoBtn")&&!spinning,canReplay:vis("replayBtn")&&!spinning,
-      grand:vis("grand"),standby:vis("standby"),summary:vis("summary"),photo:vis("photoView"),board:$("stage").classList.contains("board"),canBoard:vis("boardBtn")&&!spinning,
+      grand:vis("grand"),standby:vis("standby"),summary:vis("summary"),photo:vis("photoView")||photoSoon,board:$("stage").classList.contains("board"),canBoard:vis("boardBtn")&&!spinning,
       canSummary:anyDrawn(),sound:$("soundBtn").textContent.includes("あり"),
       plans:plans().map(q=>({id:q.id,t:q.label+(q.name&&q.name!==q.label?"（"+q.name+"）":""),c:q.count})),
       rail:S.order.map((x,i)=>{const q=prizeOf(x);return q?{t:dispTitle(q),c:q.count,d:!!S.results[x],cur:i===S.idx}:null}).filter(Boolean),
