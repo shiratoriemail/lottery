@@ -1215,7 +1215,8 @@ const Music=(()=>{
       const seq=fx==="mid"?[[523,0,.15],[523,.16,.15],[523,.32,.15],[698,.5,.9],[880,.5,.9],[1046,.5,.9]]:[[659,0,.12],[784,.13,.12],[1046,.26,.6]];
       seq.forEach(([f,d,l])=>note(f,t+d,l,"sawtooth",.12));if(fx==="mid")crash(t+.5,.2,1.5);}catch(e){}},
     toggle(){on=!on;if(!on)this.stop();return on},
-    unlock(){try{ac()}catch(e){}}
+    unlock(){try{ac()}catch(e){}},
+    keepAwake(){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.frequency.value=35;g.gain.value=.0008;o.connect(g);g.connect(c.destination);o.start();}catch(e){}}
   };
 })();
 $("soundBtn").onclick=()=>{const on=Music.toggle();$("soundBtn").textContent=on?"🔊 音あり":"🔇 音なし";if(on)Music.unlock();};
@@ -1274,7 +1275,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-11";
+const PAGE_VERSION="商品名版 11/02-12";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1350,7 +1351,7 @@ const Sync=(()=>{
     $("useServer").onclick=()=>{$("syncChoice").hidden=true;choosing=false;adopt(j.state,j.rev);status("ok","共有中");};
   }
   async function pull(){
-    if(busy||choosing||document.hidden)return;
+    if(busy||choosing||(document.hidden&&!IS_SCREEN))return;
     if(!reached)status("wait",first?"サーバーに接続中…（起動に最大1分）":"再接続中…");
     busy=true;let next=null;
     try{
@@ -1591,15 +1592,23 @@ const Duo=(()=>{
     catch(e){$("screenDot").textContent="○ サーバー接続待ち";}
     let ran=false;while(queue.length){const c=queue.shift();try{exec(c)}catch(e){done=c.seq}ran=true}
     if(ran){try{await post("/api/screen",{status:status(),after,id:SCREEN_ID,claim})}catch(e){}}
-    setTimeout(screenLoop,ran?400:700);}
+    loopBusy=false;nextAt=Date.now()+(ran?400:700);}
+  // ブラウザは裏に回ったページのタイマーを最大1分に1回まで遅くする。ワーカーの時計はその対象外なので、それで動かす
+  let loopBusy=false,nextAt=0,lastPull=0;
+  function tickScreen(){const now=Date.now();
+    if(!loopBusy&&now>=nextAt){loopBusy=true;screenLoop().catch(()=>{loopBusy=false;nextAt=Date.now()+700});}
+    if(now-lastPull>4000){lastPull=now;Sync.pull();}}
+  function startClock(){
+    try{const w=new Worker(URL.createObjectURL(new Blob(["setInterval(()=>postMessage(0),250)"],{type:"text/javascript"})));w.onmessage=tickScreen;}
+    catch(e){setInterval(tickScreen,250);}}
   function startScreen(){document.body.classList.add("screenMode");$("screenGate").hidden=false;$("screenDot").hidden=false;
-    $("gateGo").onclick=async()=>{Music.unlock();ready=true;claim=Date.now()/1000;$("screenGate").hidden=true;Standby.show();
+    $("gateGo").onclick=async()=>{Music.unlock();Music.keepAwake();ready=true;claim=Date.now()/1000;$("screenGate").hidden=true;Standby.show();
       try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement)await f.call(d)}catch(e){}
       try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}};
     // ブラウザの全画面が解除されていたら、画面のどこかをクリックしたときに全画面に戻す
     document.addEventListener("click",()=>{if(!ready)return;try{const d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;if(f&&!document.fullscreenElement&&!document.webkitFullscreenElement)f.call(d).catch?.(()=>{})}catch(e){}});
     document.addEventListener("visibilitychange",async()=>{if(document.visibilityState==="visible"&&ready){try{if(navigator.wakeLock)await navigator.wakeLock.request("screen")}catch(e){}Sync.pull();}});
-    screenLoop();}
+    startClock();}
 
   /* ===== リモコン ===== */
   let lastResync=0,st=null,age=null,screens=0,sent=0,sentAt=0,redoArm=null,resetArm=null;
@@ -1613,8 +1622,13 @@ const Duo=(()=>{
   const BTNS=["rmStart","rmDraw","rmNext","rmPrev","rmGrand","rmPhotoBtn","rmReplay","rmStandby","rmSummary","rmBoard","rmSound","rmExGo","rmRedo","rmReset","rmMain","rmPhotoX"];
   function render(){
     const alive=st&&age!=null&&age<6;
-    if(!alive){conn("off",st?`映す画面からの応答がありません（${Math.round(age||0)}秒）`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
-      BTNS.forEach(b=>$(b).disabled=true);if(!resetArm)$("rmReset").disabled=false;return}
+    if(!alive){conn("off",st?`映す画面が止まっています（${Math.round(age||0)}秒応答なし）。映す側のPCで画面を前面に出すか、ページを再読み込みしてください`:"映す画面が見つかりません。プロジェクターの端末で「映す画面にする」を開いてください");
+      BTNS.forEach(b=>$(b).disabled=true);if(!resetArm)$("rmReset").disabled=false;$("rmResync").disabled=false;
+      if(sent){sent=0;msg("映す画面が止まっているため、まだ実行されていません。映す画面が動き出すと反映されます");}
+      const done=S.order.filter(id=>S.results[id]).length;
+      $("rmPos").textContent=`共有データ：${S.order.length}賞中 ${done}賞 抽選済み（映す画面の表示は止まる前のものです）`;
+      $("rmMain").textContent="映す画面の応答待ち";$("rmMain").className="btn rmBig";$("rmMain").disabled=true;$("rmHint").textContent="";
+      if($("rmPhotoX"))$("rmPhotoX").disabled=true;return}
     conn(st.ready?"ok":"warn",st.ready?"映す画面とつながっています":"映す画面で「映す画面として開始」を押してください（音と全画面のため）");
     if(st.hidden)conn("warn","映す画面が裏に回っています。映す側のPCで前面に出してください");
     if(screens>1)conn("warn",`映す画面が${screens}台開いています。最後に開始した1台だけが動きます。不要な方を閉じてください`);
@@ -1677,7 +1691,8 @@ const Duo=(()=>{
     $("rmReset").onclick=()=>{const b=$("rmReset"),L="最初からやり直す（全結果を消す）";
       if(!resetArm){b.textContent="もう一度押すと、すべての当選結果を消して最初の抽選に戻ります";b.classList.add("danger");
         resetArm=setTimeout(()=>{resetArm=null;b.textContent=L;b.classList.remove("danger")},4000);return}
-      clearTimeout(resetArm);resetArm=null;b.textContent=L;b.classList.remove("danger");resetShared();send("reset");};
+      clearTimeout(resetArm);resetArm=null;b.textContent=L;b.classList.remove("danger");resetShared();send("reset");
+      if(!(st&&age!=null&&age<6))setTimeout(()=>msg("共有データの全結果を消しました。映す画面は止まっているため、動き出したときに最初からになります"),400);};
     pull();setInterval(pull,1000);}
   function startResults(){ // 抽選結果だけを映す（数秒ごとに自動で更新）
     document.body.classList.add("resultsMode");document.title="結果表示｜"+document.title;let last="";
