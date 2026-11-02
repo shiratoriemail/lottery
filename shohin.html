@@ -905,7 +905,7 @@ function countdown(p,done,tk){
 function spin(id,p,cand){
   const winners=shuffle(cand.slice()).slice(0,p.count).sort((a,b)=>a-b);
   const balls=[...$("balls").children],cls=tierCls(id),grand=isBig(p.fx),revive=p.fx==="revival";
-  const dur=grand?16000:p.fx==="mid"?8000:(p.count>30?6000:4500),t0=performance.now();
+  const dur=grand?16000:p.fx==="mid"?6000:(p.count>30?6000:4500),t0=performance.now();
   // 豪華演出で2名のとき: 1人目は中盤で確定、2人目は最後まで引っぱる
   const stopAt=(grand&&balls.length===2)?[dur*0.5,dur]:balls.map((_,i)=>dur*0.55+dur*0.45*((i+1)/balls.length));
   Music.start(p.fx,dur/1000);
@@ -1260,7 +1260,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-1";
+const PAGE_VERSION="商品名版 11/02-2";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
