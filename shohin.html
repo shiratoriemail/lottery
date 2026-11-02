@@ -278,6 +278,14 @@ body.screenMode #photoClose{display:none}
 @media (prefers-reduced-motion:reduce){.ball.win,.prizeImg{animation:none}.prize{transition:none}h1{animation:none}
   #stage.suspense,#grand .rays,#grand.go *,#grand.go::after,.cdNum{animation:none!important}}
 /* ---------- 待ち受け画面（抽選会が始まるまで映しておく） ---------- */
+#ending{position:fixed;inset:0;z-index:34;overflow:hidden;color:#fff7e0;background:radial-gradient(ellipse at 50% 35%,#4a3409 0%,#1a1103 50%,#050300 100%)}
+#ending::before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 0 8deg,rgba(242,193,78,.09) 8deg 16deg,transparent 16deg 30deg);animation:sbRot 120s linear infinite;pointer-events:none}
+.edTitle{font-family:var(--display);font-size:clamp(3rem,min(17vw,22vh),13rem);line-height:1.05;letter-spacing:.1em;padding-left:.1em;
+  background:linear-gradient(100deg,#b8862b 0%,#ffe9a8 22%,#f2c14e 40%,#fff6d6 50%,#d9a33a 62%,#ffe08a 80%,#b8862b 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite;filter:drop-shadow(0 5px 0 #6b4a12) drop-shadow(0 0 34px rgba(242,193,78,.45))}
+.edThanks{font-family:var(--display);font-size:clamp(1.6rem,6vh,4rem);color:#fff;letter-spacing:.12em}
+.edCount{font-size:clamp(1rem,3vh,1.8rem);color:#e8dcc0;letter-spacing:.1em}
+@media (prefers-reduced-motion:reduce){#ending::before,.edTitle{animation:none}}
 #standby{position:fixed;inset:0;z-index:60;overflow:hidden;color:#fff7e0;
   background:radial-gradient(ellipse at 50% 30%,#3a2a5c 0%,#1a1430 45%,#08060f 100%)}
 #standby::before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 0 8deg,rgba(242,193,78,.07) 8deg 16deg,transparent 16deg 30deg);
@@ -576,6 +584,16 @@ body.screenMode #log{display:none}
   </div>
 </div>
 
+<div id="ending" hidden role="dialog" aria-label="抽選会終了">
+  <div class="sbInner">
+    <div class="sbEyebrow">EPデータウィーブ 発足記念イベント</div>
+    <div class="edTitle">抽選会終了</div>
+    <div class="sbRule">THANK YOU</div>
+    <div class="edThanks">ご参加ありがとうございました</div>
+    <div class="edCount" id="edCount"></div>
+  </div>
+</div>
+
 <div id="standby" hidden role="dialog" aria-label="抽選会の待ち受け画面">
   <canvas id="sbFx" aria-hidden="true"></canvas>
   <div class="sbInner">
@@ -678,6 +696,9 @@ function migrate(v){
     if(!v.order.length)v.order=v.prizes.map(p=>p.id).reverse();
   }
   v.extras=v.extras||[];v.results=v.results||{};delete v.roster;
+  // 安全策：抽選の順番に、もう存在しない賞が残っていたら取り除き、今の位置をずらす
+  if(Array.isArray(v.order)){const ok=new Set([...v.prizes,...v.extras].map(p=>p.id)),i=Math.max(0,v.idx|0);
+    v.idx=v.order.slice(0,i).filter(id=>ok.has(id)).length;v.order=v.order.filter(id=>ok.has(id));if(v.idx>v.order.length)v.idx=v.order.length;}
   return v;
 }
 try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.prizes&&v.prizes.length)S=migrate(v);}catch(e){}
@@ -859,11 +880,13 @@ function prepareStage(){
   const id=S.order[S.idx];
   $("extraPanel").hidden=true;
   if(id===undefined){ // finished
+    if(IS_SCREEN&&anyDrawn()){const n=Object.values(S.results).reduce((a,v)=>a+v.length,0);$("edCount").textContent=`当選者 ${n}名`;$("ending").hidden=false;}
     $("presenter").textContent="";
     $("rank").className="rank tier1";$("rank").textContent="抽選終了";$("rank").style.fontSize="";
     $("prize").className="prize show";$("prize").textContent="ご参加ありがとうございました";
     $("sub").textContent="";$("balls").innerHTML="";$("reveal").innerHTML="";$("drawBtn").hidden=true;$("nextBtn").hidden=true;setReplay(lastGrand());setBoard(false);$("boardBtn").hidden=true;$("stagePhotoBtn").hidden=true;$("sumBtn").hidden=!anyDrawn();Summary.refresh();updateNav();return;
   }
+  $("ending").hidden=true;
   const p=prizeOf(id);
   $("stagePhotoBtn").hidden=posOf(id)>=0; // 追加抽選のときだけ、その場で写真を選べる
   $("presenter").textContent=p.presenter?`抽選者　${p.presenter}`:"";
@@ -1090,7 +1113,7 @@ function resetAll(){
   renderSetup();window.scrollTo({top:0,behavior:"smooth"});
 }
 const remoteSetupOn=()=>document.body.classList.contains("remoteSetup");
-function resetShared(){clearDraw();S.started=true;save();} // 共有データの結果を消す（映す画面は次の読み込みで追いつく）
+async function resetShared(){await Sync.forceSync();clearDraw();S.started=true;save();Sync.flush();} // 最新を読み込んでから結果を消し、すぐ保存（映す画面は次の読み込みで追いつく）
 let setupResetArmed=null;const SETUP_RESET_LABEL="最初からやり直す（全結果を消す）";
 $("setupReset").onclick=()=>{if(spinning)return;const b=$("setupReset");
   if(!anyDrawn()&&!S.started){$("setupMsg").textContent="まだ抽選結果はありません。";return}
@@ -1281,7 +1304,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="商品名版 11/02-15";
+const PAGE_VERSION="商品名版 11/02-18";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="shohin-rev",DIRTYKEY="shohin-dirty";
@@ -1343,8 +1366,9 @@ const Sync=(()=>{
     if(!add.length&&!pics)return null;
     const taken=new Set(Object.values(m.results).flat());
     S.extras.forEach(q=>{if(!m.extras.some(x=>x.id===q.id))m.extras.push(JSON.parse(JSON.stringify(q)))});
-    S.order.forEach((id,i)=>{if(!m.order.includes(id))m.order.splice(Math.min(i,m.order.length),0,id)});
-    add.forEach(id=>{if(S.results[id].every(n=>!taken.has(n)))m.results[id]=S.results[id].slice()});
+    const exists=id=>[...m.prizes,...m.extras].some(q=>q.id===id);
+    S.order.forEach((id,i)=>{if(!m.order.includes(id)&&exists(id))m.order.splice(Math.min(i,m.order.length),0,id)});
+    add.forEach(id=>{if(exists(id)&&S.results[id].every(n=>!taken.has(n)))m.results[id]=S.results[id].slice()});
     if(add.length)m.started=true;const cur=S.order[S.idx];const k=m.order.indexOf(cur);m.idx=k>=0?k:S.idx;
     return m;}
   function askChoice(j){
@@ -1366,7 +1390,8 @@ const Sync=(()=>{
       if(j.state&&j.rev>rev){
         // この端末で一度も共有していない設定があり、内容が違うときは、どちらを使うか選んでもらう
         if(rev===0&&(hadLocal||dirty)&&sig(S)!==sig(j.state))askChoice(j);
-        else if(canAdopt()){const had=dirty;adopt(j.state,j.rev);if(had)status("warn","他の端末の変更を読み込みました");}}
+        else if(dirty)next=push; // まだ送っていない変更があるときは、先に送る（読み込みで上書きしない）
+        else if(canAdopt())adopt(j.state,j.rev);}
       else if(j.rev<rev){setRev(j.rev);next=push;}      // サーバー側のデータが消えていた → この端末の内容で作り直す
       else if(dirty||(!j.state&&hadLocal))next=push;     // 未送信の変更、または設定済みの最初の1台
       if(!dirty&&!next&&!choosing&&el.dataset.kind!=="warn")status("ok","共有中");
@@ -1563,7 +1588,7 @@ const Duo=(()=>{
       winners:id&&S.results[id]?S.results[id].map(fmt):[],spinning,
       canDraw:vis("drawBtn")&&!$("drawBtn").disabled&&!spinning,canNext:vis("nextBtn")&&!spinning,nextLabel:$("nextBtn").textContent,
       canPrev:vis("prevBtn")&&!spinning,prevLabel:$("prevBtn").textContent,canRedo:vis("redoBtn")&&!spinning,canReplay:vis("replayBtn")&&!spinning,
-      grand:vis("grand"),standby:vis("standby"),summary:vis("summary"),photo:vis("photoView")||photoSoon,board:$("stage").classList.contains("board"),canBoard:vis("boardBtn")&&!spinning,
+      grand:vis("grand"),standby:vis("standby"),ending:vis("ending"),summary:vis("summary"),photo:vis("photoView")||photoSoon,board:$("stage").classList.contains("board"),canBoard:vis("boardBtn")&&!spinning,
       canSummary:anyDrawn(),sound:$("soundBtn").textContent.includes("あり"),
       plans:plans().map(q=>({id:q.id,t:q.label+(q.name&&q.name!==q.label?"（"+q.name+"）":""),c:q.count})),
       rail:S.order.map((x,i)=>{const q=prizeOf(x);return q?{t:dispTitle(q),c:q.count,d:!!S.results[x],cur:i===S.idx}:null}).filter(Boolean),
@@ -1690,7 +1715,8 @@ const Duo=(()=>{
     else if(st.grand){t="発表画面を閉じる";act="grandClose";hint="当選発表を映しています";}
     else if(st.canDraw){t="ルーレット スタート";cls+=" primary";act="draw";hint=st.photo?"写真を映しています。紹介が終わったら「写真を閉じる」を押してください":"準備ができたら押してください";}
     else if(st.canNext){t=st.nextLabel||"次へ";cls+=" apply";act="next";hint="この賞は抽選済みです。次の賞へ進みます";}
-    else if(!st.id&&st.canSummary&&!st.summary){t="結果一覧を映す";cls+=" apply";act="summary";arg=true;hint="すべての抽選が終わりました。押すと映す画面に結果一覧を全画面で出します";}
+    else if(!st.id&&st.canSummary&&!st.summary){t="結果一覧を映す";cls+=" apply";act="summary";arg=true;hint=st.ending?"「抽選会終了」の画面を映しています。押すと結果一覧を全画面で映します":"すべての抽選が終わりました。押すと結果一覧を全画面で映します";}
+    else if(!st.id&&st.summary){t="結果一覧を閉じる";act="summary";arg=false;hint="結果一覧を映しています。閉じると「抽選会終了」の画面に戻ります";}
     else{t=st.summary?"結果一覧を映しています":"すべての抽選が終わりました";hint=st.summary?"閉じるときは下の「結果一覧を閉じる」":"";}
     b.textContent=t;b.className=cls;b.disabled=!act;mainAct=act;mainArg=arg;h.textContent=hint;}
   function startRemote(){
