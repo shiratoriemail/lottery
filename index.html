@@ -421,8 +421,9 @@ html:has(body.screenMode){scrollbar-width:none}html:has(body.screenMode)::-webki
         <label for="maxNum">配った番号札の最大番号（1〜この番号で抽選）
           <input id="maxNum" type="number" min="1" value="80" inputmode="numeric">
         </label>
-        <label for="exclude">欠席・対象外の番号（カンマ区切り、例：3,17,25）
-          <input id="exclude" type="text" placeholder="なし">
+        <label for="exclude">欠席・対象外の番号（カンマ区切り。連番は「1-5」や「1〜5」、例：3,17,25 / 1-5,30-40）
+          <input id="exclude" type="text" placeholder="なし" oninput="exclNoteUI()">
+          <span class="note" id="exclNote" aria-live="polite"></span>
         </label>
         <label for="startAt">開始予定時刻（任意・待ち受け画面に表示）
           <input id="startAt" type="time">
@@ -510,7 +511,7 @@ html:has(body.screenMode){scrollbar-width:none}html:has(body.screenMode)::-webki
           <label for="exLabel">賞名<input id="exLabel" type="text" value="敗者復活賞"></label>
           <label for="exCount">当選人数<input id="exCount" type="number" min="1" value="1" inputmode="numeric"></label>
           <label for="exName" class="wide">景品名（任意）<input id="exName" type="text"></label>
-          <label for="exOnly" class="wide">対象の番号（クイズ正解者など。空欄なら、まだ当選していない全員）<input id="exOnly" type="text" placeholder="例：12,45,103"></label>
+          <label for="exOnly" class="wide">対象の番号（クイズ正解者など。空欄なら、まだ当選していない全員）<input id="exOnly" type="text" placeholder="例：12,45,103 / 1-20"></label>
           <label for="exPres">抽選者（任意）<input id="exPres" type="text" placeholder="例：COO"></label>
           <label for="exFx">演出<select id="exFx"></select></label>
           <label for="exBoard">番号の全画面表示<select id="exBoard"></select></label>
@@ -633,7 +634,7 @@ html:has(body.screenMode){scrollbar-width:none}html:has(body.screenMode)::-webki
     <label for="rmPlan">賞<select id="rmPlan"></select></label>
     <label for="rmExLabel" id="rmExLabelWrap">名前<input id="rmExLabel" type="text" value="敗者復活賞"></label>
     <label for="rmCount">当選人数<input id="rmCount" type="number" min="1" inputmode="numeric" value="1"></label>
-    <label for="rmOnly">対象の番号（空欄なら、まだ当選していない全員）<input id="rmOnly" type="text" inputmode="numeric" placeholder="例：12,45,103"></label>
+    <label for="rmOnly">対象の番号（空欄なら、まだ当選していない全員）<input id="rmOnly" type="text" placeholder="例：12,45,103 / 1-20"></label>
     <button class="btn" id="rmExGo" type="button">この抽選を次に行う</button>
   </details>
   <div class="rmRail" id="rmRail"></div>
@@ -710,7 +711,23 @@ function resizeFile(file){return new Promise((ok,ng)=>{const fr=new FileReader()
   const m=1000,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
   c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.82))};im.onerror=ng;im.src=fr.result};fr.onerror=ng;fr.readAsDataURL(file)})}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
-function parseNums(t){return new Set(String(t).split(/[,、，\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n)))}
+function parseNums(t){
+  // 「3,17,25」のほか「1-5」「1〜5」のような連番も受け付ける（全角数字・全角記号も可）
+  const z=String(t||"").replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/番/g,"").replace(/まで/g,"").replace(/から/g,"-").replace(/[－‐‑–—―ー−〜～~]/g,"-").replace(/\s*-\s*/g,"-");
+  const out=new Set();
+  for(const part of z.split(/[,、，\s]+/)){
+    if(!part)continue;
+    const m=part.match(/^(\d+)-(\d+)$/);
+    if(m){let a=parseInt(m[1],10),b=parseInt(m[2],10);if(a>b)[a,b]=[b,a];if(b-a>100000)continue;for(let n=a;n<=b;n++)out.add(n);continue;}
+    const n=parseInt(part,10);if(!isNaN(n))out.add(n);
+  }
+  return out;
+}
+function exclNoteUI(){const el=$("exclNote");if(!el)return;const ns=[...parseNums($("exclude").value)].filter(n=>n>=1).sort((a,b)=>a-b);
+  if(!ns.length){el.textContent="";return;}
+  const segs=[];let a=ns[0],b=ns[0];const f=()=>segs.push(a===b?`${a}`:`${a}〜${b}`);
+  for(const n of ns.slice(1)){if(n===b+1)b=n;else{f();a=b=n;}}f();
+  el.textContent=`外す番号：${ns.length}名（${segs.join("、")}）`;}
 function basePool(){const a=[];for(let i=1;i<=S.max;i++)a.push(i);return a}
 function digits(){return String(S.max).length}
 const fmt=n=>String(n).padStart(digits(),"0");
@@ -726,7 +743,7 @@ const fxOptions=sel=>Object.entries(FX).map(([k,v])=>`<option value="${k}" ${sel
 
 /* ---------- setup ---------- */
 function renderSetup(){
-  $("maxNum").value=S.max;$("startAt").value=S.startAt||"";$("exclude").value=S.exclude;
+  $("maxNum").value=S.max;$("startAt").value=S.startAt||"";$("exclude").value=S.exclude;exclNoteUI();
   const locked=anyDrawn(),n=S.prizes.length;
   $("prizeRows").innerHTML=S.prizes.map((p,i)=>{const im=getImg(p.id),done=!!S.results[p.id];return `
     <div class="prizeBlock ${tierCls(p.id)}">
@@ -1007,7 +1024,7 @@ $("exPlan").onchange=()=>{exPlanId=$("exPlan").value;const q=prizeOf(exPlanId);i
   $("exFx").value=q.fx||"revival";$("exBoard").value=q.board==="off"?"off":"on";exPhoto=getImg(q.id)||"";exPhotoUI();
   $("exMsg").textContent="準備した内容を読み込みました。対象の番号を入れて「この抽選を次に行う」を押してください。";$("exOnly").focus();};
 $("extraBtn").onclick=()=>{if(spinning)return;const pn=$("extraPanel");pn.hidden=!pn.hidden;
-  if(!pn.hidden){exPlanUI();if(!exPlanId&&plans().length){exPlanId=plans()[0].id;$("exPlan").value=exPlanId;$("exPlan").onchange();}exPhotoUI();$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切りで入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
+  if(!pn.hidden){exPlanUI();if(!exPlanId&&plans().length){exPlanId=plans()[0].id;$("exPlan").value=exPlanId;$("exPlan").onchange();}exPhotoUI();$("exMsg").textContent="今の抽選の次に差し込まれます。対象の番号はカンマ区切り（連番は 1-20 のようにハイフン）で入れてください。";pn.scrollIntoView({behavior:"smooth",block:"nearest"});}};
 $("exCancel").onclick=()=>{$("extraPanel").hidden=true;requestAnimationFrame(fitBalls)};
 $("exGo").onclick=()=>{if(spinning)return;
   const count=Math.max(1,parseInt($("exCount").value,10)||1),only=[...parseNums($("exOnly").value)];
@@ -1264,7 +1281,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="11/02-10";
+const PAGE_VERSION="11/04-1";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
