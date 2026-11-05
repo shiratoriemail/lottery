@@ -677,7 +677,19 @@ function defaults(){return [
   {id:"t3",label:"3等",name:"3等の景品名",count:15,presenter:"",fx:"normal"},
   {id:"t4",label:"4等",name:"4等の景品名",count:20,presenter:"",fx:"normal"}]}
 let S={prizes:defaults(),extras:[],max:80,exclude:"",started:false,results:{},order:[],idx:0};
-function drawOrder(){return S.prizes.map(p=>p.id).reverse()}
+function drawOrder(){return S.prizes.filter(p=>p.count>0).map(p=>p.id).reverse()} // 当選人数0の賞は抽選しない
+function reconcileOrder(){ // 当選人数を0にした／0から戻した賞を、抽選の順番から外す／入れる（抽選済みの賞と今の位置はそのまま）
+  const main=new Set(S.prizes.map(p=>p.id)),cur=S.order[S.idx];
+  const o=S.order.filter(id=>{const q=prizeOf(id);return q&&!(main.has(id)&&!S.results[id]&&!(q.count>0))});
+  const prev=S.order.slice(0,S.idx).filter(id=>o.includes(id));
+  const bound=()=>cur&&S.results[cur]&&o.includes(cur)?o.indexOf(cur)+1:(prev.length?o.indexOf(prev[prev.length-1])+1:0);
+  const want=drawOrder();
+  want.forEach((id,k)=>{if(o.includes(id))return;const after=want.slice(k+1).find(x=>o.includes(x)&&!S.results[x]);
+    o.splice(Math.max(after?o.indexOf(after):o.length,bound()),0,id)});
+  const idx=cur&&S.results[cur]&&o.includes(cur)?o.indexOf(cur):bound();
+  if(JSON.stringify(o)!==JSON.stringify(S.order)||idx!==S.idx){S.order=o;S.idx=Math.min(idx,o.length);return true}
+  return false;
+}
 S.order=drawOrder();
 function migrate(v){
   if(v.prizes.length&&v.prizes[0].id===undefined){ // 旧形式（1等〜N等）から移行
@@ -747,7 +759,7 @@ function renderSetup(){
   const locked=anyDrawn(),n=S.prizes.length;
   $("prizeRows").innerHTML=S.prizes.map((p,i)=>{const im=getImg(p.id),done=!!S.results[p.id];return `
     <div class="prizeBlock ${tierCls(p.id)}">
-      <div class="pbHead"><span class="dot"></span><span class="note">上から${i+1}番目${done?"・抽選済み":""}</span>
+      <div class="pbHead"><span class="dot"></span><span class="note">上から${i+1}番目${done?"・抽選済み":""}${!done&&!(p.count>0)?"・<b style=\"color:var(--gold)\">抽選しない（当選人数0）</b>":""}</span>
         <span class="pbTools">
           <button class="btn small" type="button" data-up="${p.id}" ${locked||i===0?"disabled":""} aria-label="上へ移動">↑</button>
           <button class="btn small" type="button" data-down="${p.id}" ${locked||i===n-1?"disabled":""} aria-label="下へ移動">↓</button>
@@ -755,7 +767,7 @@ function renderSetup(){
         </span></div>
       <div class="pbGrid">
         <label for="pl_${p.id}">賞名<input id="pl_${p.id}" type="text" value="${esc(p.label)}"></label>
-        <label for="pc_${p.id}">当選人数<input id="pc_${p.id}" type="number" min="1" inputmode="numeric" value="${p.count}"></label>
+        <label for="pc_${p.id}">当選人数（0＝この賞は抽選しない）<input id="pc_${p.id}" type="number" min="${done?1:0}" inputmode="numeric" value="${p.count}"></label>
         <label for="pn_${p.id}" class="wide">景品名（当選まで非表示）<input id="pn_${p.id}" type="text" value="${esc(p.name)}"></label>
         <label for="pp_${p.id}">抽選者（任意）<input id="pp_${p.id}" type="text" placeholder="例：代表取締役社長" value="${esc(p.presenter||"")}"></label>
         <label for="pfx_${p.id}">演出（豪華・敗者復活＝カウントダウン＋全画面発表）<select id="pfx_${p.id}">${fxOptions(p.fx)}</select></label>
@@ -801,9 +813,11 @@ function readForm(){
     p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
     p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd").value;});
   S.prizes.forEach(p=>{const g=k=>$(k+"_"+p.id);if(!g("pl"))return;
-    p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=Math.max(1,parseInt(g("pc").value,10)||p.count);
+    {const c=parseInt(g("pc").value,10);p.label=g("pl").value.trim()||p.label;p.name=g("pn").value.trim();p.count=isNaN(c)||(S.results[p.id]&&c<1)?p.count:Math.max(0,c);}
     p.presenter=g("pp").value.trim();p.fx=g("pfx").value;p.board=g("pbd")?g("pbd").value:(p.board==="off"?"off":"on");});
-  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;S.startAt=$("startAt").value;save();
+  S.max=parseInt($("maxNum").value,10)||S.max;S.exclude=$("exclude").value;S.startAt=$("startAt").value;
+  if(!anyDrawn()&&!S.started){S.order=drawOrder();S.idx=0}else reconcileOrder();
+  save();
 }
 $("prizeRows").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;readForm();
   const d=b.dataset,id=d.up||d.down||d.rm||d.del,i=posOf(id);
@@ -841,6 +855,7 @@ $("startBtn").onclick=()=>{readForm();
   if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return;}
   const need=[...S.prizes,...S.extras].filter(p=>!p.planned&&!S.results[p.id]).reduce((a,p)=>a+p.count,0),avail=pool().length;
   if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return;}
+  if(!anyDrawn()&&!drawOrder().length){msg("当選人数が1名以上の賞がありません。どれかの賞の当選人数を1以上にしてください。");return;}
   const first=!anyDrawn();if(first){S.order=drawOrder();S.idx=0;}
   S.started=true;save();showMain();$("setupBtn").textContent="設定";window.scrollTo({top:0,behavior:"smooth"});
   if(first&&ROLE!=="screen")Standby.show(); // 開始したら、まず待ち受け画面を映す
@@ -910,7 +925,7 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues
 
 let spinning=false,drawToken=0; // drawToken：やり直しで進行中の抽選を打ち切るための番号
 $("drawBtn").onclick=()=>{
-  if(spinning)return;const id=S.order[S.idx],p=prizeOf(id);
+  if(spinning)return;const id=S.order[S.idx],p=prizeOf(id);if(!p||!(p.count>0))return;
   const cand=pool(p);if(cand.length<p.count){$("sub").textContent=`抽選対象が足りません（対象 ${cand.length}名）。`;return;}
   spinning=true;$("drawBtn").disabled=true;$("extraBtn").disabled=true;$("extraPanel").hidden=true;updateNav();
   const tk=++drawToken;
@@ -1109,7 +1124,7 @@ let bulkArmed=null;const BULK_LABEL="一括実行（残りの賞をまとめて�
 $("bulkBtn").onclick=()=>{if(spinning)return;readForm();const b=$("bulkBtn");
   if(!(S.max>=1)){msg("最大番号を1以上で入れてください。");return}
   const fresh=!S.started&&!anyDrawn(),order=fresh?drawOrder():S.order;
-  const ids=order.filter(id=>prizeOf(id)&&!S.results[id]);
+  const ids=order.filter(id=>prizeOf(id)&&prizeOf(id).count>0&&!S.results[id]);
   if(!ids.length){$("setupMsg").textContent="まだ抽選していない賞はありません。";return}
   const need=ids.reduce((a,id)=>a+prizeOf(id).count,0),avail=pool().length;
   if(need>avail){msg(`当選人数の合計（${need}名）が抽選対象（${avail}名）より多いです。人数か最大番号を見直してください。`);return}
@@ -1281,7 +1296,7 @@ const Grand=(()=>{
 })();
 
 /* ---------- 端末間の共有保存（Render の保存サーバー経由） ---------- */
-const PAGE_VERSION="11/04-1";
+const PAGE_VERSION="11/05-1";
 // Render から開いたときは同じサーバー、GitHub Pages などから開いたときは Render のサーバーにつなぐ
 const API_BASE=/onrender\.com$/.test(location.hostname)?"":"https://epdw-lottery.onrender.com";
 const REVKEY="lottery-rev",DIRTYKEY="lottery-dirty";
